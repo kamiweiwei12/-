@@ -83,7 +83,16 @@ stateDiagram-v2
 
 归还检查发现损坏时，在归还事务后创建维修记录，资产进入 MAINTENANCE；维修完成后写 `MAINTENANCE_OUT` 并恢复 AVAILABLE。维修区间与租赁区间都参与资产可用性判断。
 
-`PICKED_UP -> OVERDUE` 的执行方式尚为 `D-002 PENDING`：候选方案为定时扫描或访问时惰性校正。两者都不释放库存，人工确认前不得实现或宣称已验证。
+`D-002` 已批准采用定时扫描：后端按可配置周期查询已到 `rental_period` 上界且状态为 `PICKED_UP` 的租赁，分批锁定后幂等转为 `OVERDUE` 并记录首次逾期时刻。重复或并发扫描不产生第二次转换；失败记录由下次扫描重试。逾期不写释放流水，实际归还后才转 `RETURNED` 并释放库存。
+
+```text
+定时触发
+  → 查询到期且PICKED_UP的租赁
+  → FOR UPDATE SKIP LOCKED分批锁定
+  → 再次校验状态和截止时刻
+  → 更新OVERDUE/overdue_at
+  → 不释放资产或批量库存
+```
 
 ## 6. 核销
 

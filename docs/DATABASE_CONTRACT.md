@@ -42,7 +42,7 @@ resource_maintenance(maintenance_id PK, resource_unit_id FK, period tstzrange, s
 ```text
 holiday(holiday_id PK, campground_id FK, holiday_date, name, UQ(campground_id, holiday_date))
 price_rule(price_rule_id PK, campground_id FK, resource_type_id FK NULL,
-           stay_mode NULL /* 关系约束待D-001确认 */, rule_type, operation, value, priority,
+           stay_mode NULL CHECK StayMode, rule_type, operation, value, priority,
            valid_from, valid_to, enabled, description)
 price_rule_weekday(price_rule_id PK/FK, weekday PK CHECK 1..7)
 price_rule_date(price_rule_id PK/FK, service_date PK)
@@ -55,11 +55,7 @@ price_rule_date(price_rule_id PK/FK, service_date PK)
 - `ADDITION`：最终价 = `base_price + value`。
 - “同一有效报价单元”定义为一个具体的 `(campground_id, resource_type_id, stay_mode, service_date)`。先找出该单元全部匹配规则；若最高 `priority` 上多于一条，则即使规则分别来自全营地、资源类型或日期范围等不同声明范围，也构成冲突。管理端发布检查必须检测规则有效集合的交集；报价端发现冲突返回 `PRICE_RULE_CONFLICT`，不得以创建时间或主键静默选胜者。v1.0-rc不叠加规则。
 
-`price_rule.stay_mode` 与 `resource_type_stay_mode` 的关系尚无批准证据，登记为 `D-001`：
-
-- 方案A：仅允许资源类型级住宿模式规则，要求 `stay_mode IS NULL OR resource_type_id IS NOT NULL`，并以 `(resource_type_id, stay_mode)` 复合外键引用 `resource_type_stay_mode`。
-- 方案B：允许全营地住宿模式规则；`stay_mode`只受公共枚举/CHECK约束，资源类型级规则另做兼容性校验。
-- 在人工选择前，Flyway不得实现该字段，报价测试也不得把任一方案写成PASS。
+`D-001` 已批准采用方案B：允许 `resource_type_id IS NULL AND stay_mode IS NOT NULL`，用于全营地DAY_PASS或OVERNIGHT规则。`stay_mode`始终受公共StayMode枚举/CHECK约束；由于宽范围规则允许资源类型为空，`price_rule` 不对 `(resource_type_id, stay_mode)` 建立复合外键。资源类型级规则在管理端发布时必须校验 `(resource_type_id, stay_mode)` 存在于 `resource_type_stay_mode`，报价查询也必须再次限制为该资源类型实际支持的模式；不得把全营地规则应用到不支持该模式的资源类型。
 
 ### 套餐目录
 
@@ -161,7 +157,7 @@ equipment_stock(stock_id PK, model_id UQ/FK, total_quantity, maintenance_quantit
                 CHECK 0<=maintenance<=total)
 equipment_asset(asset_id PK, model_id FK, asset_code UQ, status, acquired_at, retired_at NULL)
 equipment_rental(rental_id PK, order_item_id UQ/FK, model_id FK, rental_period tstzrange,
-                 quantity, status, picked_up_at NULL, returned_at NULL)
+                 quantity, status, picked_up_at NULL, overdue_at NULL, returned_at NULL)
 equipment_rental_asset(rental_id PK/FK, asset_id PK/FK)
 equipment_maintenance(maintenance_id PK, asset_id FK, period tstzrange, status, description, cost NULL)
 inventory_movement(movement_id PK, model_id FK, asset_id FK NULL, order_item_id FK NULL,
@@ -172,11 +168,9 @@ inventory_movement(movement_id PK, model_id FK, asset_id FK NULL, order_item_id 
 - BULK 模式：锁 `equipment_stock` 行，汇总重叠有效租赁数量；`available = total - maintenance - overlapping_reserved`，不把可用量作为独立真值列。
 - 当前状态是便捷投影，库存流水不可变，用于解释每次变化。
 
-`RentalStatus.OVERDUE` 的写入策略登记为 `D-002`，尚未批准：
+`D-002` 已批准采用方案A：后端定时任务按可配置周期扫描 `status='PICKED_UP' AND upper(rental_period) <= CURRENT_TIMESTAMP` 的记录，以 `FOR UPDATE SKIP LOCKED` 分批锁定并幂等更新为 `OVERDUE`，同时首次写入 `overdue_at`。调度周期属于部署配置，不改变业务截止时刻；任务失败的记录留待下次扫描重试。
 
-- 方案A：后端定时任务按营地时区扫描 `PICKED_UP` 且已超过 `upper(rental_period)` 的记录并幂等转为 `OVERDUE`。
-- 方案B：读取/取还操作时惰性校正，并提供管理员显式对账操作；不承诺截止时刻立即落库。
-- 两种方案都不得自动释放装备；逾期租赁仍占用资产/数量，归还后转 `RETURNED` 并写归还流水。人工确认前不得实现执行器或声称过期处理测试通过。
+定时任务只改变租赁状态，不写 `RELEASE` 流水、不减少重叠占用、不把资产恢复为AVAILABLE。`OVERDUE` 仍占用对应资产或批量库存；实际归还事务才转为 `RETURNED`、写 `RETURN` 流水并释放占用。实现时必须用可控时钟覆盖“截止前、恰好截止、截止后、重复扫描、并发扫描、逾期后归还”测试；当前尚无实现，因此这些测试保持NOT RUN。
 
 ### 天气与统计（P1/视图）
 

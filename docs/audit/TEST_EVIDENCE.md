@@ -85,3 +85,33 @@
 | 实际输出摘要 | 推送 `2882736..566e53b`；ahead/behind为 `0 0`；远端feature为 `566e53b84ff2a3d4223bb144013471f0bd25bbfd`；main/develop仍为 `9c9cd3c8bbc7391da9638140a47bd6d92175ef57` |
 | 退出码 | 0 |
 | 结论 | PASS：证明两项整改提交已推送且未修改main/develop；不代表PR已Review或合并 |
+
+## TE-20261125-08：批准同步开始状态
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-25 17:05:49 +08:00 |
+| 分支/HEAD | `feature/collaboration-prep` / `131ec982be0af8f2afe8e272a66086505430e6a7` |
+| 命令 | `git status --short --branch`；`git rev-parse HEAD`；`git rev-list --left-right --count HEAD...origin/feature/collaboration-prep` |
+| 实际输出摘要 | 开始工作区干净；跟踪授权feature分支；ahead/behind为 `0 0` |
+| 退出码 | 0 |
+| 结论 | PASS：仅证明本次同步开始时Git前置状态符合要求 |
+
+## TE-20261125-09：批准决策文档静态检查
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-25 17:08:46 +08:00 |
+| 环境 | Windows PowerShell；工作目录 `D:/Will/SYSU/数据库系统原理/大作业`；未提交工作区 |
+| 命令 | `rg`决策状态/跨契约术语；PowerShell Markdown内部链接检查；`rg`凭据特征；分组 `git diff --no-ext-diff`；`git diff --check` |
+| 实际输出摘要 | D-001/B和D-002/A在DB/API/ENUM/需求/流程/治理文档中可追踪；内部链接输出 `Markdown internal links: OK`；凭据扫描输出 `no matches`；diff check无空白错误，仅显示预期LF→CRLF警告 |
+| 退出码 | 0（各次可见重跑） |
+| 结论 | PASS：证明文档链接、登记术语和diff格式通过静态检查；完整diff为Codex自检，不是独立审计或人工PR Review |
+
+## TE-20261125-10：业务与运行时测试
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| D-001 DDL/发布/报价测试 | NOT RUN | 本轮禁止创建Flyway和业务代码，当前只有候选契约 |
+| D-002调度/时钟/并发测试 | NOT RUN | 本轮禁止初始化Spring Boot或实现调度器 |
+| PostgreSQL事务与库存测试 | NOT RUN | 无数据库工程或迁移，本次批准不等于运行时验证 |

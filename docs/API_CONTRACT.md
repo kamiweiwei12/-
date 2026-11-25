@@ -167,9 +167,13 @@ VerificationResponse
 | POST | `/admin/equipment/rentals/{id}/return` | Admin | 归还 |
 | POST | `/admin/equipment/assets/{id}/maintenance` | Admin | 建维修记录 |
 
+装备租赁响应中的 `status` 使用公共 `RentalStatus`。`OVERDUE` 由后端定时任务写入，不由客户端提交目标状态，也不提供“手工标记逾期”接口；逾期不会释放库存，实际归还后响应才变为 `RETURNED`。调度间隔内读取到的 `PICKED_UP` 可能尚未完成状态投影更新，权威逾期事实仍由 `rental_period` 截止时刻判断。
+
 ### 管理端
 
 管理资源、价格、场次、时段、装备和订单统一放在 `/admin/**`，CRUD 使用复数名词；删除有历史的主数据改为停用。
+
+`/admin/price-rules` 允许 `resourceTypeId` 为空而 `stayMode` 非空，以表达全营地住宿模式规则；当两者均非空时，发布服务必须确认该组合存在于 `resource_type_stay_mode`。报价端再次按资源类型支持模式过滤，并继续执行 `PRICE_RULE_CONFLICT` 检查。
 
 ```text
 /admin/resources

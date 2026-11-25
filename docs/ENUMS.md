@@ -44,4 +44,5 @@ EXPIRED         -> (terminal)
 - `ResourceStatus` 是运营可售状态；真实可用性还要结合开放规则和订单时间占用。
 - `EquipmentAssetStatus` 用于当前快速展示；资产历史以租赁占用、维修记录和库存流水为准。
 - 状态改变必须由后端用例完成，前端不得直接提交任意目标状态。
-- `RentalStatus.OVERDUE` 表示已取件且超过应还时刻但尚未归还；其写入执行器仍为 `D-002 PENDING`。在决定定时扫描或惰性校正前，不得把任一转换时机当成正式契约。
+- `RentalStatus` 转换：`RESERVED -> PICKED_UP | CANCELLED`，`PICKED_UP -> RETURNED | OVERDUE`，`OVERDUE -> RETURNED`；`RETURNED/CANCELLED` 为终态。
+- `OVERDUE` 表示已取件且达到或超过应还时刻但尚未归还。依据已批准的D-002方案A，由后端定时任务幂等写入；逾期不释放库存，只有实际归还才释放。

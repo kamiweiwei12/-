@@ -60,3 +60,35 @@ git diff --no-ext-diff -- <all tracked changed files, split into review groups>
 - 实际输出：远端从 `2882736` 前进到 `566e53b`；随后ahead/behind为 `0 0`。
 - `git ls-remote`：feature为 `566e53b84ff2a3d4223bb144013471f0bd25bbfd`；`main`、`develop` 均保持 `9c9cd3c8bbc7391da9638140a47bd6d92175ef57`。
 - 本段将通过独立审计闭合提交保存；其SHA和最终推送状态以Git历史及最终任务报告共同核验。
+
+## OP-20261125-02：批准D-001与D-002并同步候选契约
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-25 17:05:49–17:08:46 +08:00（提交与推送结果在下方追加） |
+| 任务 | 根据项目负责人批准，将D-001=B、D-002=A同步到公共契约和治理文档；保持v1.0-rc |
+| 分支 | `feature/collaboration-prep`，开始HEAD `131ec982be0af8f2afe8e272a66086505430e6a7`；开始时与远端ahead/behind `0 0` |
+| 修改文件 | `CHANGELOG.md`、`README.md`、DB/API/ENUM/需求/业务流程/冻结/开发/任务板/确认文档，以及审计决策、问题、操作、测试和Skill合规记录；未创建代码、迁移或工程配置 |
+| 操作 | 读取AGENTS与三个项目Skill；核对分支/HEAD/状态；按批准同步契约；完整diff自检时发现并移除未获批准的“方案B+复合外键”混合约束；分拆重跑静态检查 |
+| Skill | `contract-change`、`git-pr`、`test-evidence` 均完整读取并应用，详见 `SC-20261125-02` |
+| 测试 | 文档术语交叉检索、Markdown内部链接、凭据模式、完整diff和 `git diff --check`；业务/数据库/调度测试NOT RUN |
+| 结果 | D-001/B与D-002/A已写入未提交工作区；候选状态未升级；未创建、批准或合并PR |
+| Commit | 本段创建时未提交；实际提交与推送结果仅在执行后追加 |
+| 风险 | 定时任务周期仍是部署配置；运行时约束和并发行为尚无实现测试；正式冻结仍依赖 `Janovo2117` 的真实PR Review；回滚使用revert未来提交，不改写历史 |
+
+### 已实际执行的关键命令
+
+```text
+git status --short --branch
+git rev-parse HEAD
+git rev-list --left-right --count HEAD...origin/feature/collaboration-prep
+git diff --name-status
+git diff --stat
+rg <D-001/D-002/status and cross-contract terms> <contract files>
+PowerShell Markdown内部链接检查
+rg <credential-like patterns> .
+git diff --no-ext-diff -- <all changed files, split into groups>
+git diff --check
+```
+
+第一次组合静态检查的工具输出因显示上限截断，未据此宣称PASS；随后拆分命令重跑并记录可见输出和退出码。完整diff自检发现草稿曾将D-001/B与复合外键混合，已在提交前纠正为批准的纯方案B。
