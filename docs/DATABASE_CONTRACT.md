@@ -1,6 +1,6 @@
 # 数据库公共契约
 
-状态：`FROZEN v1.0`。本文是实现约束，具体DDL仍必须通过经审查的Flyway迁移落地。
+状态：`CANDIDATE v1.0-rc`，等待另一成员真实 PR Review。本文是候选实现约束，不得据此宣称正式冻结或开始迁移。
 
 ## 1. 全局规则
 
@@ -42,7 +42,7 @@ resource_maintenance(maintenance_id PK, resource_unit_id FK, period tstzrange, s
 ```text
 holiday(holiday_id PK, campground_id FK, holiday_date, name, UQ(campground_id, holiday_date))
 price_rule(price_rule_id PK, campground_id FK, resource_type_id FK NULL,
-           stay_mode NULL, rule_type, operation, value, priority,
+           stay_mode NULL /* 关系约束待D-001确认 */, rule_type, operation, value, priority,
            valid_from, valid_to, enabled, description)
 price_rule_weekday(price_rule_id PK/FK, weekday PK CHECK 1..7)
 price_rule_date(price_rule_id PK/FK, service_date PK)
@@ -53,7 +53,13 @@ price_rule_date(price_rule_id PK/FK, service_date PK)
 - `FIXED`：最终价 = `value`。
 - `MULTIPLIER`：最终价 = `base_price × value`。
 - `ADDITION`：最终价 = `base_price + value`。
-- 同一作用域和日期若存在多个并列最高优先级规则，管理端拒绝发布，报价端返回 `PRICE_RULE_CONFLICT`；v1不叠加规则。
+- “同一有效报价单元”定义为一个具体的 `(campground_id, resource_type_id, stay_mode, service_date)`。先找出该单元全部匹配规则；若最高 `priority` 上多于一条，则即使规则分别来自全营地、资源类型或日期范围等不同声明范围，也构成冲突。管理端发布检查必须检测规则有效集合的交集；报价端发现冲突返回 `PRICE_RULE_CONFLICT`，不得以创建时间或主键静默选胜者。v1.0-rc不叠加规则。
+
+`price_rule.stay_mode` 与 `resource_type_stay_mode` 的关系尚无批准证据，登记为 `D-001`：
+
+- 方案A：仅允许资源类型级住宿模式规则，要求 `stay_mode IS NULL OR resource_type_id IS NOT NULL`，并以 `(resource_type_id, stay_mode)` 复合外键引用 `resource_type_stay_mode`。
+- 方案B：允许全营地住宿模式规则；`stay_mode`只受公共枚举/CHECK约束，资源类型级规则另做兼容性校验。
+- 在人工选择前，Flyway不得实现该字段，报价测试也不得把任一方案写成PASS。
 
 ### 套餐目录
 
@@ -67,6 +73,8 @@ package_component(package_component_id PK, package_offer_id FK, item_type, quant
 
 `package_component` 是选购模板，不直接占库存；具体房间、场次、时段和资产在报价/下单时选定。CHECK约束保证每行只有与 `item_type` 对应的一个目标外键非空。套餐可与单选项共同进入一个订单。
 
+`package_offer.code UQ` 在v1.0-rc仅适用于“单营地部署、代码作为外部稳定标识”的边界。若项目启用多营地独立编码，必须先经契约变更将其迁移为 `UQ(campground_id, code)`；不能在同一正式版本中同时声称全局唯一和营地内唯一。
+
 套餐优惠按组件成交前小计计算：`FIXED_TOTAL` 的优惠为 `max(0, subtotal-pricing_value)`；`DISCOUNT_AMOUNT` 不得超过小计；`DISCOUNT_RATE` 取0到1之间的小数。最终优惠及其按订单项的可解释分摊写入成交快照，但v1不开放部分退款。
 
 ### 统一订单、支付与历史
@@ -74,6 +82,7 @@ package_component(package_component_id PK, package_offer_id FK, item_type, quant
 ```text
 customer_order(order_id PK, order_no UQ, user_id FK, campground_id FK,
                status, currency, total_amount, create_idempotency_key,
+               create_request_fingerprint,
                expires_at, version, created_at, updated_at,
                UQ(user_id, create_idempotency_key))
 order_package(order_package_id PK, order_id FK, package_offer_id FK,
@@ -85,7 +94,9 @@ order_item(order_item_id PK, order_id FK, item_type, item_name_snapshot,
 order_status_history(history_id PK, order_id FK, from_status, to_status, changed_by FK NULL, reason, changed_at)
 order_item_status_history(history_id PK, order_item_id FK, from_status, to_status,
                           changed_by FK NULL, reason, changed_at)
-payment(payment_id PK, order_id FK, payment_no UQ, status, amount, method='SIMULATED', idempotency_key UQ, paid_at, created_at)
+payment(payment_id PK, order_id FK, payment_no UQ, status, amount, method='SIMULATED',
+        idempotency_key, request_fingerprint, paid_at, created_at,
+        UQ(order_id, idempotency_key))
 price_snapshot_line(snapshot_line_id PK, order_item_id FK, service_date, rule_id FK NULL,
                     rule_name_snapshot, operation_snapshot, rule_value_snapshot, amount)
 ```
@@ -95,6 +106,12 @@ price_snapshot_line(snapshot_line_id PK, order_item_id FK, service_date, rule_id
 每间具体住宿对应一个数量为1的 `order_item`；因此一个订单可以包含多间房，同时每间房保持独立价格快照、占用和履约状态。单选项的 `order_package_id` 为空，套餐组件指向对应成交套餐快照。
 
 同一订单中的全部项目必须属于同一 `campground_id`。允许多次模拟支付尝试，但数据库使用部分唯一索引保证一张订单至多存在一条 `SUCCEEDED` 支付记录，且成功金额等于订单总额。
+
+订单创建键与支付键是两个独立命名空间，均由调用方生成：
+
+- `customer_order.create_idempotency_key` 标识一次逻辑购物车提交，作用域为 `(user_id, create_idempotency_key)`；同键同请求返回原订单，同键不同请求指纹返回 `IDEMPOTENCY_CONFLICT`。
+- `payment.idempotency_key` 标识某张订单的一次逻辑支付尝试，作用域为 `(order_id, idempotency_key)`；同键同请求返回原支付结果，同键不同 `desiredOutcome` 或金额指纹返回冲突。
+- 失败后使用新键可创建下一次尝试；订单已有 `SUCCEEDED` 记录时，新键请求返回既有成功结果，不再新增成功或失败记录。
 
 ### 住宿/日营占用
 
@@ -129,7 +146,9 @@ lift_slot(lift_slot_id PK, lift_id FK, start_at, end_at, capacity, reserved_quan
           UQ(lift_id, start_at), CHECK reserved between 0 and capacity)
 lift_booking(lift_booking_id PK, order_item_id UQ/FK, lift_slot_id FK, quantity)
 verification_token(token_id PK, order_item_id FK, token_hash UQ, status, valid_from, valid_until)
-verification_event(event_id PK, token_id FK, lift_slot_id FK NULL, result, verified_at, operator_id FK NULL)
+verification_event(event_id PK, token_id FK, lift_slot_id FK NULL, result, verified_at,
+                   operator_id FK, idempotency_key, request_fingerprint,
+                   UQ(operator_id, idempotency_key))
 ```
 
 容量事务锁定 `ski_session`/`lift_slot FOR UPDATE`，检查后原子递增。取消按业务占用记录精确递减并写流水/历史。
@@ -152,6 +171,12 @@ inventory_movement(movement_id PK, model_id FK, asset_id FK NULL, order_item_id 
 - ASSET 模式：`equipment_rental_asset` 对有效租期建立资产+时间排斥（可能使用单独 `asset_reservation` 表以允许部分条件）。
 - BULK 模式：锁 `equipment_stock` 行，汇总重叠有效租赁数量；`available = total - maintenance - overlapping_reserved`，不把可用量作为独立真值列。
 - 当前状态是便捷投影，库存流水不可变，用于解释每次变化。
+
+`RentalStatus.OVERDUE` 的写入策略登记为 `D-002`，尚未批准：
+
+- 方案A：后端定时任务按营地时区扫描 `PICKED_UP` 且已超过 `upper(rental_period)` 的记录并幂等转为 `OVERDUE`。
+- 方案B：读取/取还操作时惰性校正，并提供管理员显式对账操作；不承诺截止时刻立即落库。
+- 两种方案都不得自动释放装备；逾期租赁仍占用资产/数量，归还后转 `RETURNED` 并写归还流水。人工确认前不得实现执行器或声称过期处理测试通过。
 
 ### 天气与统计（P1/视图）
 

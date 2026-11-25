@@ -1,6 +1,6 @@
 # REST API 公共契约
 
-状态：`FROZEN v1.0`。基础路径 `/api/v1`，媒体类型 `application/json`。
+状态：`CANDIDATE v1.0-rc`，等待另一成员真实 PR Review。基础路径 `/api/v1`，媒体类型 `application/json`。
 
 ## 1. 通用格式
 
@@ -58,9 +58,31 @@ OrderResponse
   id:string, orderNo:string, status:enum, currency:"CNY",
   totalAmount:string, expiresAt?:datetime,
   packages:OrderPackageResponse[], items:OrderItemResponse[]
+
+LodgingSelection
+  resourceUnitId:string, stayMode:StayMode, startAt:datetime, endAt:datetime,
+  guestCount:int
+
+SkiSelection
+  skiSessionId:string, quantity:int
+
+LiftSelection
+  liftSlotId:string, quantity:int
+
+EquipmentSelection
+  equipmentModelId:string, startAt:datetime, endAt:datetime, quantity:int
+
+PackageSelection
+  packageOfferId:string, components:PackageComponentSelection[]
+
+PackageComponentSelection
+  packageComponentId:string, itemType:OrderItemType, quantity:int,
+  resourceUnitId?:string, stayMode?:StayMode, startAt?:datetime, endAt?:datetime,
+  guestCount?:int, skiSessionId?:string, liftSlotId?:string,
+  equipmentModelId?:string
 ```
 
-`LodgingSelection` 每项指定一个不同的具体 `resourceUnitId`、住宿模式、起止时刻和人数，因此一次订单可预订多间房。套餐选择提供 `packageOfferId` 及各组件最终选择；套餐和单选数组可同时非空，独立数组只表达套餐之外的单选项。一个订单内全部项目必须属于同一营地。
+`LodgingSelection` 每项指定一个不同的具体 `resourceUnitId`、住宿模式、起止时刻和人数，因此一次订单可预订多间房。`PackageComponentSelection` 是按 `itemType` 判别的结构，只允许对应目标字段非空；同一 `packageComponentId` 可出现多行以选择多个具体资源，其数量合计必须等于目录组件要求。住宿行 `quantity` 固定为1；装备的具体ASSET由服务端分配，客户端只选择型号。套餐和单选数组可同时非空，独立数组只表达套餐之外的单选项。一个订单内全部项目必须属于同一营地。
 
 系统不使用 `quoteToken`。创建订单必须重算全部价格和库存，`expectedTotal` 只用于发现用户看到的报价是否变化，不能覆盖服务端金额。若不同，返回409 `PRICE_CHANGED`，`error.details`包含新的报价，且不创建订单。
 
@@ -100,6 +122,19 @@ OrderResponse
 
 v1只支持整单模拟支付和整单取消；没有订单项部分支付、部分取消或部分退款接口。一张订单只产生一次应付总额，但订单项分别记录履约状态。只有全部订单项尚未开始履约时允许顾客取消。
 
+模拟支付请求与响应：
+
+```text
+SimulatePaymentRequest
+  desiredOutcome:"SUCCESS"|"FAILURE"
+
+PaymentResponse
+  id:string, paymentNo:string, orderId:string, status:PaymentStatus,
+  amount:string, method:"SIMULATED", paidAt?:datetime
+```
+
+订单和支付的 `Idempotency-Key` 均由调用方生成，但作用域独立：创建订单按“已认证用户+键”，模拟支付按“订单+键”。同键同规范化请求返回原结果；同键不同请求返回409 `IDEMPOTENCY_CONFLICT`。支付失败后可使用新键重试；一旦成功，后续新键请求返回既有成功支付，不新建记录。
+
 ### 滑雪、课程和缆车
 
 | Method | Path | Auth | 说明 |
@@ -108,6 +143,20 @@ v1只支持整单模拟支付和整单取消；没有订单项部分支付、部
 | GET | `/ski/sessions` | Public | 可用课程/票务场次 |
 | GET | `/lifts/slots` | Public | 缆车时段及剩余容量 |
 | POST | `/verifications` | Admin | 核销票/预约码 |
+
+核销契约：
+
+```text
+VerificationRequest
+  tokenCode:string, liftSlotId?:string
+
+VerificationResponse
+  verificationEventId:string, tokenId:string, orderItemId:string,
+  status:"USED", result:"ACCEPTED", verifiedAt:datetime,
+  liftSlotId?:string, operatorId:string
+```
+
+调用方必须提供 `Idempotency-Key`。作用域为“已认证管理员+键”；服务端保存请求指纹。同键同请求返回原成功响应，同键不同请求返回 `IDEMPOTENCY_CONFLICT`。不同键重复核销同一令牌返回 `ALREADY_VERIFIED`；令牌行锁、状态更新和成功事件写入必须在同一事务中完成。
 
 ### 装备
 
@@ -155,7 +204,7 @@ v1只支持整单模拟支付和整单取消；没有订单项部分支付、部
 - `/admin/**` 要求 ADMIN；资源所有权在服务层二次校验。
 - CORS 只允许配置的前端源。
 
-## 6. 已冻结认证和时效
+## 6. 候选认证和时效
 
 - access token有效期30分钟，v1不实现refresh token。
 - 游客可查询和报价，创建订单必须登录。

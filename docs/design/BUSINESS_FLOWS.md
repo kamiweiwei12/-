@@ -28,7 +28,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[收到支付请求+Idempotency-Key] --> B{已有相同幂等结果?}
+    A[收到支付请求+调用方生成的Idempotency-Key] --> B{本订单已有相同键和请求指纹?}
     B -- 是 --> C[返回原结果]
     B -- 否 --> D[锁定订单]
     D --> E{PENDING_PAYMENT且未过期?}
@@ -83,9 +83,13 @@ stateDiagram-v2
 
 归还检查发现损坏时，在归还事务后创建维修记录，资产进入 MAINTENANCE；维修完成后写 `MAINTENANCE_OUT` 并恢复 AVAILABLE。维修区间与租赁区间都参与资产可用性判断。
 
+`PICKED_UP -> OVERDUE` 的执行方式尚为 `D-002 PENDING`：候选方案为定时扫描或访问时惰性校正。两者都不释放库存，人工确认前不得实现或宣称已验证。
+
 ## 6. 核销
 
 读取二维码/文本码 → 哈希查找令牌 → 锁令牌 → 检查有效期、状态和适用时段 → 写核销事件 → 状态改 USED。唯一约束和行锁保证重复扫描只能一次成功。
+
+调用方生成 `Idempotency-Key`，作用域为管理员+键，并保存请求指纹；同键同请求重放原结果，同键不同请求报冲突，不同键重复使用令牌报 `ALREADY_VERIFIED`。
 
 ## 7. 混合购物车锁顺序
 

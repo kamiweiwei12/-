@@ -1,6 +1,6 @@
 # 公共 ENUM 契约
 
-状态：`FROZEN v1.0`。枚举值在数据库、Java DTO、OpenAPI和TypeScript中必须完全一致。数据库优先使用 `varchar + CHECK`，便于 Flyway 演进；不自行创建同义值。
+状态：`CANDIDATE v1.0-rc`，等待另一成员真实 PR Review。枚举值在数据库、Java DTO、OpenAPI和TypeScript中必须完全一致。数据库优先使用 `varchar + CHECK`，便于 Flyway 演进；不自行创建同义值。
 
 | 枚举 | 值 |
 |---|---|
@@ -44,3 +44,4 @@ EXPIRED         -> (terminal)
 - `ResourceStatus` 是运营可售状态；真实可用性还要结合开放规则和订单时间占用。
 - `EquipmentAssetStatus` 用于当前快速展示；资产历史以租赁占用、维修记录和库存流水为准。
 - 状态改变必须由后端用例完成，前端不得直接提交任意目标状态。
+- `RentalStatus.OVERDUE` 表示已取件且超过应还时刻但尚未归还；其写入执行器仍为 `D-002 PENDING`。在决定定时扫描或惰性校正前，不得把任一转换时机当成正式契约。

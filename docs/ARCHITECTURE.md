@@ -1,6 +1,6 @@
 # 系统架构与功能模块
 
-状态：`FROZEN v1.0`。
+状态：`CANDIDATE v1.0-rc`，等待另一成员真实 PR Review。
 
 ## 总体架构
 

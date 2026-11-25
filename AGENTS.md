@@ -2,6 +2,21 @@
 
 本文件约束仓库内的人工开发者和自动化协作代理。每次开始任务前必须先阅读本文件，再读取任务涉及的 `docs/` 契约。
 
+## 0. 强制任务与Skill流程
+
+1. 每次任务开始前完整读取本文件，并按任务读取 `.agents/skills/` 下适用的 `SKILL.md`。
+2. 公共契约修改使用 `contract-change`；Git/PR操作使用 `git-pr`；测试或检查证据使用 `test-evidence`。不适用的Skill也要在 `docs/audit/SKILL_COMPLIANCE.md` 记录理由。
+3. 操作前检查当前分支、HEAD、工作区和远端分歧，并在修改前说明计划和授权范围。
+4. 尽量最小化修改，不扩大用户授权的产品、代码、基础设施或外部操作范围。
+5. 完成后检查完整diff；不能只检查统计摘要。
+6. 执行适用测试并如实记录 `PASS`、`FAIL`、`NOT RUN` 或 `UNVERIFIED`。
+7. 同步更新 `CHANGELOG.md` 和受影响文档。
+8. 每次任务更新 `docs/audit/OPERATION_LOG.md`、`TEST_EVIDENCE.md` 和 `SKILL_COMPLIANCE.md`。
+9. 提交前必须执行 `git diff --check`，并记录命令、实际输出摘要和退出码。
+10. 未经人工批准不得合并PR、修改分支保护、重写Git历史、冒用他人身份或修改全局Git配置。
+11. 遇到契约冲突、业务歧义、错误分支、远端分歧或超出授权范围时停止对应操作并询问。
+12. Skill与日志只能提供项目内可复核的过程证据，不能证明Codex隐藏思考过程，也不能替代独立人工审计。
+
 ## 1. 技术栈（冻结）
 
 - Frontend：React + TypeScript + Vite + Ant Design + ECharts + React Router + Axios。

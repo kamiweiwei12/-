@@ -9,7 +9,7 @@
 ## 第2阶段状态（2026-11-25）
 
 - GitHub远端已接入，`main`、`develop` 和协作准备feature分支已推送。
-- 18项决策已确认，公共契约冻结为v1.0；支持多住宿、套餐/单选混合购物车和一次整单支付。
+- 18项业务确认已追加记录，公共契约为 `v1.0-rc` 候选版；尚有D-001/D-002待决且未完成双人Review。
 - A为朱承威（24325352），B为袁顺熙（24325311）。
 - 基础工程尚未初始化，以下构建/运行命令仍不得记录为通过。
 
@@ -60,4 +60,4 @@ docker compose up -d db
 
 - A：建立 Spring Boot、Flyway/PostgreSQL、V1基础字典与用户权限、迁移测试。
 - B：建立 React/Vite/Ant Design、路由和 API client，依据契约实现登录/错误状态骨架。
-- 共同：以 `CONTRACT_FREEZE v1.0` 为唯一基线；任何变更通过契约PR同步处理。
+- 共同：审查 `CONTRACT_FREEZE v1.0-rc`、处理D-001/D-002并完成真实双人PR Review；此前禁止工程初始化。

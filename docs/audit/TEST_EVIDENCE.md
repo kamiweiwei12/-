@@ -1,0 +1,68 @@
+# 测试与检查证据
+
+## 证据状态
+
+- `PASS`：实际执行、退出码0且覆盖目标。
+- `FAIL`：实际执行失败或输出违反目标。
+- `NOT RUN`：未执行并说明原因。
+- `UNVERIFIED`：现有证据不足以覆盖目标。
+
+## TE-20261125-01：开始前Git状态
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-25 +08:00 |
+| 分支/HEAD | `feature/collaboration-prep` / `288273692bdd48eb597b163f72c7c8e0af90ea9d` |
+| 环境 | Windows PowerShell；工作目录 `D:/Will/SYSU/数据库系统原理/大作业` |
+| 命令 | `git status --short --branch`；`git rev-list --left-right --count HEAD...origin/feature/collaboration-prep` |
+| 实际输出摘要 | 工作区干净；ahead/behind为 `0 0` |
+| 退出码 | 0 |
+| 结论 | PASS：仅证明开始时分支正确、工作区干净且跟踪分支无分歧 |
+
+## TE-20261125-02：历史来源读取
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-25 +08:00 |
+| 分支/HEAD | `feature/collaboration-prep` / `288273692bdd` |
+| 命令 | `git show 2882736^:docs/PHASE1_REVIEW.md`；`git show 2882736^:docs/PHASE2_DECISIONS.md`；`git diff 2882736^ 2882736 -- <contract files>` |
+| 实际输出摘要 | 取回 `0cd6bae` 中18项原始提案、PROPOSED状态和集中待回复问题；确认 `2882736` 将其改写为确认结果并标记FROZEN v1.0 |
+| 退出码 | 0 |
+| 结论 | PASS：证明本轮历史恢复基于Git对象而非记忆；不证明业务决定已获双人批准 |
+
+## 未运行测试
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| Spring Boot/JUnit | NOT RUN | 本轮禁止初始化或开发业务代码，仓库无后端工程 |
+| React lint/build | NOT RUN | 本轮禁止初始化前端工程，仓库无前端工程 |
+| PostgreSQL/Flyway | NOT RUN | 本轮禁止初始化数据库及创建迁移 |
+| 并发/性能测试 | NOT RUN | 无可运行系统，不能产生真实业务结果 |
+
+## TE-20261125-03：项目Skill结构验证
+
+| 尝试 | 命令/环境 | 实际输出摘要 | 退出码 | 结论 |
+|---|---|---|---|---|
+| 1 | `python quick_validate.py <skill>` | WindowsApps占位解释器不可用，三个Skill均返回9009 | 9009（各调用） | FAIL；未执行到Skill内容验证 |
+| 2 | `py quick_validate.py <skill>` | Python 3.14按GBK读取UTF-8中文，三个Skill均抛出 `UnicodeDecodeError` | 1（各调用） | FAIL；编码环境不兼容 |
+| 3 | 当前进程设置 `PYTHONUTF8=1` 后执行 `py quick_validate.py <skill>` | contract-change、git-pr、test-evidence均输出 `Skill is valid!` | 0（各调用） | PASS；仅证明frontmatter、命名和脚手架结构通过官方快速校验，不证明规则设计正确 |
+
+## TE-20261125-04：文档与契约静态检查
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-25 16:29 +08:00 |
+| 分支/HEAD | `feature/collaboration-prep` / `288273692bdd`（未提交工作区） |
+| 命令 | `git diff 0cd6bae --`历史文件；`rg`版本/契约术语；PowerShell Markdown内部链接检查；`rg`凭据特征；`git diff --check` |
+| 实际输出摘要 | 历史文件相对0cd6bae只新增顶部历史说明和末尾确认引用；候选状态命中符合预期；八项术语在对应事实源/Issue中出现；内部链接OK；未发现GitHub token/私钥特征；diff check无错误，仅CRLF转换警告 |
+| 退出码 | 0（组合检查命令） |
+| 结论 | PASS：覆盖文档结构、链接、已登记术语和空白错误；不证明待决业务方案、运行时行为或独立审计结论 |
+
+## TE-20261125-05：完整diff人工自检
+
+| 字段 | 内容 |
+|---|---|
+| 命令 | 按文件组执行 `git diff --no-ext-diff -- <changed tracked files>`；新文件使用 `Get-Content -Raw` 完整读取 |
+| 实际输出摘要 | 已检查状态文档、三份契约、业务流程、历史恢复、审计文件及三个Skill；发现并补充 `customer_order.create_request_fingerprint` 后继续检查 |
+| 退出码 | 0 |
+| 结论 | PASS：证明本轮自检覆盖全部变更文本；这是Codex自检，不是独立审计或双人Review |

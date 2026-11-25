@@ -1,16 +1,17 @@
-# 公共契约冻结记录
+# 公共契约候选冻结记录
 
-## 冻结信息
+## 当前候选状态
 
-- 冻结日期：2026-11-25（Asia/Taipei记录；营地业务时区为Asia/Shanghai）。
-- 冻结版本：`Snowfield Contract v1.0`。
-- 数据库设计：`DATABASE_CONTRACT v1.0`。
-- REST API：`API_CONTRACT v1.0`，基础路径 `/api/v1`。
-- 枚举：`ENUMS v1.0`。
-- 概念/逻辑设计：`DATABASE_DESIGN v1.0`。
-- 决策来源：`PHASE2_DECISIONS.md` 的18项确认结果。
+- 候选形成日期：2026-11-25（Asia/Taipei记录；营地业务时区为Asia/Shanghai）。
+- 当前版本：`Snowfield Contract v1.0-rc`。
+- 数据库设计：`DATABASE_CONTRACT v1.0-rc`。
+- REST API：`API_CONTRACT v1.0-rc`，基础路径 `/api/v1`。
+- 枚举：`ENUMS v1.0-rc`。
+- 概念/逻辑设计：`DATABASE_DESIGN v1.0-rc`。
+- 决策来源：历史提案见 `PHASE2_DECISIONS.md`，追加确认见 `PHASE2_CONFIRMATIONS.md`。
+- Review状态：`NOT APPROVED`；尚无另一成员真实 PR Review。
 
-冻结表示后续变更必须可追溯、被审查并同步消费者，不表示设计永远不能调整。
+候选冻结只表示实现暂缓等待审查；不得描述为正式批准，也不得据此开始工程初始化。
 
 ## 已确认的关键决定
 
@@ -49,6 +50,7 @@
 - 套餐固定总价如何分摊到各订单项关系到退款；v1不做部分退款，仍需保存可解释分摊快照以支持报告。
 - 多间房同单需要验证同一 `resource_unit_id` 不能在请求中重复，并对所有住宿逐项保存价格快照。
 - 团队成员B尚需接受GitHub邀请，分支保护和真实双人PR审查尚未验证。
+- `D-001`（价格规则住宿模式关系）与 `D-002`（逾期租赁写入执行器）等待人工选择，见 `docs/audit/DECISION_LOG.md`。
 
 ## 契约修改流程
 
@@ -61,4 +63,5 @@
 
 ## 版本记录
 
-- `v1.0`（2026-11-25）：冻结第一版，确认多住宿、混合购物车、套餐、单次整单支付、无quoteToken和单规则定价。
+- `v1.0`（2026-11-25，历史记录）：提交 `2882736` 曾标记为正式冻结，但未完成另一成员 Review；此状态已由本轮审计整改纠正，不作为正式批准证据。
+- `v1.0-rc`（2026-11-25）：候选版，保留多住宿、混合购物车、套餐、单次整单支付、无quoteToken和单规则定价；等待缺口决策与双人Review。
