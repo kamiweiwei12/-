@@ -1,0 +1,29 @@
+# Java / Maven
+backend/target/
+*.class
+*.jar
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+application-local.yml
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Test and runtime output
+logs/
+reports/
+jmeter-results/
+coverage/
+
