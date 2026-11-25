@@ -66,3 +66,12 @@
 | 实际输出摘要 | 已检查状态文档、三份契约、业务流程、历史恢复、审计文件及三个Skill；发现并补充 `customer_order.create_request_fingerprint` 后继续检查 |
 | 退出码 | 0 |
 | 结论 | PASS：证明本轮自检覆盖全部变更文本；这是Codex自检，不是独立审计或双人Review |
+
+## TE-20261125-06：主整改提交
+
+| 字段 | 内容 |
+|---|---|
+| 命令 | `git commit -m "docs(audit): remediate R-3 and R-4 findings"`；`git rev-parse HEAD`；`git status --short --branch` |
+| 实际输出摘要 | 创建提交 `0586c32`，26个文件、508行新增、51行删除；完整SHA为 `0586c32a457e8063534ecb753ba323cbe5b764a9`；提交后ahead 1且工作区干净 |
+| 退出码 | 0 |
+| 结论 | PASS：证明主整改已提交到授权feature分支；不代表已推送、已Review或已合并 |
