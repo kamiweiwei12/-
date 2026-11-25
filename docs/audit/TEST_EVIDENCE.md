@@ -75,3 +75,13 @@
 | 实际输出摘要 | 创建提交 `0586c32`，26个文件、508行新增、51行删除；完整SHA为 `0586c32a457e8063534ecb753ba323cbe5b764a9`；提交后ahead 1且工作区干净 |
 | 退出码 | 0 |
 | 结论 | PASS：证明主整改已提交到授权feature分支；不代表已推送、已Review或已合并 |
+
+## TE-20261125-07：推送和远端核对
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-25 16:32:13 +08:00 |
+| 命令 | `git push origin feature/collaboration-prep`；`git rev-list --left-right --count HEAD...origin/feature/collaboration-prep`；`git ls-remote --heads origin feature/collaboration-prep develop main` |
+| 实际输出摘要 | 推送 `2882736..566e53b`；ahead/behind为 `0 0`；远端feature为 `566e53b84ff2a3d4223bb144013471f0bd25bbfd`；main/develop仍为 `9c9cd3c8bbc7391da9638140a47bd6d92175ef57` |
+| 退出码 | 0 |
+| 结论 | PASS：证明两项整改提交已推送且未修改main/develop；不代表PR已Review或合并 |

@@ -4,15 +4,15 @@
 
 | 字段 | 内容 |
 |---|---|
-| 日期 | 2026-11-25 16:26:23–16:29:26 +08:00（检查与整改）；主整改提交随后完成 |
+| 日期 | 2026-11-25 16:26:23–16:32:13 +08:00 |
 | 任务 | 恢复历史决策可追溯性、补齐八项契约审计项、建立六类审计文件及三个项目Skill |
 | 分支 | `feature/collaboration-prep`，开始HEAD `288273692bdd48eb597b163f72c7c8e0af90ea9d` |
 | 修改文件 | `AGENTS.md`、`CHANGELOG.md`、`README.md`、公共契约/流程/状态文档、`PHASE2_CONFIRMATIONS.md`、`.agents/skills/**`、`docs/audit/**`；未创建代码、迁移或工程配置 |
 | 操作 | 读取指定文档；检查Git分支/HEAD/状态/远端/历史；用 `git show 2882736^:<file>` 恢复历史；以补丁修改文档；创建并复读项目Skill |
 | Skill | 已读主机 `skill-creator/SKILL.md`；已创建并读项目 `contract-change`、`git-pr`、`test-evidence`，详情见 `SKILL_COMPLIANCE.md` |
 | 测试 | 已执行历史追加性、契约术语、内部链接、凭据模式、Skill结构及 `git diff --check`；Skill验证前两轮失败、第三轮通过，均保留；业务/数据库/性能测试NOT RUN |
-| 结果 | `COMMITTED_PENDING_PUSH`；历史原文已恢复，候选状态已纠正，D-001/D-002保持待决；详细边界见 `TEST_EVIDENCE.md` |
-| Commit | 主整改提交 `0586c32a457e8063534ecb753ba323cbe5b764a9`；本次日志回填将在后续独立提交中保存 |
+| 结果 | `PUSHED_FOR_REVIEW`；历史原文已恢复，候选状态已纠正，D-001/D-002保持待决；未Review、未合并 |
+| Commit | 主整改 `0586c32a457e8063534ecb753ba323cbe5b764a9`；证据回填 `566e53b84ff2a3d4223bb144013471f0bd25bbfd`；本段所在闭合提交以Git历史为准（提交对象无法在自身内容中自引用SHA） |
 | 风险 | 外部审计报告原文未入库；确认者A/B身份为UNKNOWN；D-001/D-002待人工决定；回滚方式为revert本轮未来提交，不改写历史 |
 
 ### 已实际执行的关键命令
@@ -53,3 +53,10 @@ git diff --no-ext-diff -- <all tracked changed files, split into review groups>
 - 实际结果：创建提交 `0586c32a457e8063534ecb753ba323cbe5b764a9`，26个文件，508行新增、51行删除；退出码0。
 - 提交后状态：`feature/collaboration-prep` 相对远端 ahead 1，工作区干净。
 - 推送：本段写入时尚未执行，不提前写成功。
+
+### 推送结果
+
+- 实际命令：`git push origin feature/collaboration-prep`，退出码0。
+- 实际输出：远端从 `2882736` 前进到 `566e53b`；随后ahead/behind为 `0 0`。
+- `git ls-remote`：feature为 `566e53b84ff2a3d4223bb144013471f0bd25bbfd`；`main`、`develop` 均保持 `9c9cd3c8bbc7391da9638140a47bd6d92175ef57`。
+- 本段将通过独立审计闭合提交保存；其SHA和最终推送状态以Git历史及最终任务报告共同核验。
