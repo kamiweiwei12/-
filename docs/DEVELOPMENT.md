@@ -6,9 +6,16 @@
 - 已确认本机 Git 2.48.1、Java 21.0.12、Node.js 24.14.1、npm 11.11.0、Docker 29.6.1 可用。
 - 本阶段初始化 Git 和文档骨架，不安装依赖、不启动数据库、不声称存在业务测试结果。
 
+## 第2阶段状态（2026-11-25）
+
+- GitHub远端已接入，`main`、`develop` 和协作准备feature分支已推送。
+- 18项决策已确认，公共契约冻结为v1.0；支持多住宿、套餐/单选混合购物车和一次整单支付。
+- A为朱承威（24325352），B为袁顺熙（24325311）。
+- 基础工程尚未初始化，以下构建/运行命令仍不得记录为通过。
+
 ## 建议工程初始化（第二阶段）
 
-1. 创建 `develop`，由其派生 `feature/database-core` 与 `feature/frontend`。
+1. 从已存在的 `develop` 派生 `feature/database-core` 与 `feature/frontend`。
 2. 生成 Spring Boot Maven 工程，仅加入已冻结依赖；禁用任何自动 DDL。
 3. 建立 Docker Compose PostgreSQL 和独立测试数据库。
 4. 以已确认契约创建 V1/V2 Flyway 基线与种子数据。
@@ -53,4 +60,4 @@ docker compose up -d db
 
 - A：建立 Spring Boot、Flyway/PostgreSQL、V1基础字典与用户权限、迁移测试。
 - B：建立 React/Vite/Ant Design、路由和 API client，依据契约实现登录/错误状态骨架。
-- 共同：审查本阶段18项确认问题，冻结 `DATABASE_CONTRACT v1`、`API_CONTRACT v1`、`ENUMS v1`。
+- 共同：以 `CONTRACT_FREEZE v1.0` 为唯一基线；任何变更通过契约PR同步处理。

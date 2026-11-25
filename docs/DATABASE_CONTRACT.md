@@ -1,6 +1,6 @@
 # 数据库公共契约
 
-状态：`DRAFT v0.1`，**不是可直接执行的最终迁移**。
+状态：`FROZEN v1.0`。本文是实现约束，具体DDL仍必须通过经审查的Flyway迁移落地。
 
 ## 1. 全局规则
 
@@ -48,26 +48,53 @@ price_rule_weekday(price_rule_id PK/FK, weekday PK CHECK 1..7)
 price_rule_date(price_rule_id PK/FK, service_date PK)
 ```
 
-规则匹配：先筛选营地、资源类型/住宿模式、有效期、星期/日期；`MANUAL_OVERRIDE/SPECIAL_DATE/HOLIDAY/SEASON/WEEKEND/BASE` 依次降低默认优先级，实际用 `priority` 决定。为避免组合不确定：
+规则匹配：`resource_type.base_price` 是唯一基础价。先筛选营地、资源类型/住宿模式、有效期、星期/日期，再选择唯一的最高优先级规则；`MANUAL_OVERRIDE/SPECIAL_DATE/HOLIDAY/SEASON/WEEKEND` 只提供默认优先级建议，实际以 `priority` 为准。
 
-- 同一优先级只允许一个 `FIXED` 规则。
-- 先选择最高优先级 `FIXED` 作为基价；再按优先级应用明确标记可叠加的 `MULTIPLIER/ADDITION`。
-- 第一版建议每个计费日只采用一个胜出规则，降低解释和测试成本；是否允许叠加列为确认项。
+- `FIXED`：最终价 = `value`。
+- `MULTIPLIER`：最终价 = `base_price × value`。
+- `ADDITION`：最终价 = `base_price + value`。
+- 同一作用域和日期若存在多个并列最高优先级规则，管理端拒绝发布，报价端返回 `PRICE_RULE_CONFLICT`；v1不叠加规则。
+
+### 套餐目录
+
+```text
+package_offer(package_offer_id PK, campground_id FK, code UQ, name, pricing_mode,
+              pricing_value, valid_from, valid_to, enabled, description)
+package_component(package_component_id PK, package_offer_id FK, item_type, quantity,
+                  resource_type_id FK NULL, ski_product_id FK NULL,
+                  lift_id FK NULL, equipment_model_id FK NULL)
+```
+
+`package_component` 是选购模板，不直接占库存；具体房间、场次、时段和资产在报价/下单时选定。CHECK约束保证每行只有与 `item_type` 对应的一个目标外键非空。套餐可与单选项共同进入一个订单。
+
+套餐优惠按组件成交前小计计算：`FIXED_TOTAL` 的优惠为 `max(0, subtotal-pricing_value)`；`DISCOUNT_AMOUNT` 不得超过小计；`DISCOUNT_RATE` 取0到1之间的小数。最终优惠及其按订单项的可解释分摊写入成交快照，但v1不开放部分退款。
 
 ### 统一订单、支付与历史
 
 ```text
 customer_order(order_id PK, order_no UQ, user_id FK, campground_id FK,
-               status, currency, total_amount, expires_at, version, created_at, updated_at)
+               status, currency, total_amount, create_idempotency_key,
+               expires_at, version, created_at, updated_at,
+               UQ(user_id, create_idempotency_key))
+order_package(order_package_id PK, order_id FK, package_offer_id FK,
+              package_code_snapshot, package_name_snapshot, pricing_mode_snapshot,
+              pricing_value_snapshot, discount_amount, subtotal_before_discount)
 order_item(order_item_id PK, order_id FK, item_type, item_name_snapshot,
-           quantity, unit_price, subtotal, price_explanation jsonb)
+           status, order_package_id FK NULL, quantity, unit_price, subtotal,
+           price_explanation jsonb)
 order_status_history(history_id PK, order_id FK, from_status, to_status, changed_by FK NULL, reason, changed_at)
+order_item_status_history(history_id PK, order_item_id FK, from_status, to_status,
+                          changed_by FK NULL, reason, changed_at)
 payment(payment_id PK, order_id FK, payment_no UQ, status, amount, method='SIMULATED', idempotency_key UQ, paid_at, created_at)
 price_snapshot_line(snapshot_line_id PK, order_item_id FK, service_date, rule_id FK NULL,
                     rule_name_snapshot, operation_snapshot, rule_value_snapshot, amount)
 ```
 
-约束：`subtotal = quantity * unit_price` 只适用于简单项；住宿逐日合计以 `price_snapshot_line` 汇总并在服务层/过程校验。订单金额不得由客户端写入。
+约束：`subtotal = quantity * unit_price` 只适用于简单项；住宿逐日合计以 `price_snapshot_line` 汇总并在服务层/过程校验。订单总额为全部明细小计减去 `order_package.discount_amount` 之和且不得为负。订单金额和套餐优惠不得由客户端权威写入。
+
+每间具体住宿对应一个数量为1的 `order_item`；因此一个订单可以包含多间房，同时每间房保持独立价格快照、占用和履约状态。单选项的 `order_package_id` 为空，套餐组件指向对应成交套餐快照。
+
+同一订单中的全部项目必须属于同一 `campground_id`。允许多次模拟支付尝试，但数据库使用部分唯一索引保证一张订单至多存在一条 `SUCCEEDED` 支付记录，且成功金额等于订单总额。
 
 ### 住宿/日营占用
 
@@ -87,6 +114,8 @@ WHERE (occupancy_status IN ('PENDING_PAYMENT','CONFIRMED','IN_USE'));
 ```
 
 需要 `btree_gist`。订单状态和占用状态不能靠两个任意更新入口维护；业务过程在同一事务同步，触发器仅记录历史/阻止非法不变量。
+
+同一创建请求不得重复出现同一个 `resource_unit_id`。多间住宿逐行插入，任一排斥约束冲突都会回滚整个订单。
 
 ### 滑雪票、课程、缆车和核销
 
@@ -159,10 +188,16 @@ weather_alert(alert_id PK, campground_id FK, severity, start_at, end_at, title, 
 - 函数/过程：报价、创建占用、取消释放的数据库核心原语。
 - 视图：每日收入、入住率、装备可用、缆车流量。
 
-## 6. 未决数据库问题
+## 6. 混合购物车事务与锁顺序
 
-1. 一张订单一期是否严格只允许一个住宿项。
-2. 价格规则是否允许倍率叠加；建议 v1 单规则胜出。
-3. 待支付占用有效期建议15分钟，是否确认。
-4. DAY_PASS 默认时段（建议09:00–18:00）是否按资源配置。
-5. 批量装备是否允许同一型号同时存在部分单件追踪；建议一个型号固定一种 tracking_mode。
+创建订单在一个事务中完成并遵循固定顺序：
+
+1. 校验幂等键和用户购物车。
+2. 按 `resource_unit_id` 升序插入住宿占用，交由排斥约束裁决。
+3. 按 `ski_session_id` 升序锁定票务/课程容量行。
+4. 按 `lift_slot_id` 升序锁定缆车容量行。
+5. 按 `model_id` 升序锁定批量装备库存；具体资产按 `asset_id` 升序分配。
+6. 重算各项价格、套餐优惠和整单总额，写入订单/套餐/明细/快照/占用。
+7. 任意一项失败则回滚全部写入；不允许生成部分成功订单。
+
+v1只支持整单支付、整单取消和模拟整单退款。订单项独立履约用于多日期服务追踪，但不开放部分取消/部分退款API。只有全部订单项尚未开始履约时才能整单取消；任一订单项进入 `IN_USE/FULFILLED` 后拒绝顾客取消并由管理员人工处理异常。

@@ -1,6 +1,6 @@
 # ER图、关系模式与3NF分析
 
-状态：`DRAFT v0.1`。为保持图可读，省略审计字段和部分候选实体；完整字段见数据库契约。
+状态：`FROZEN v1.0`。为保持图可读，省略审计字段和部分候选实体；完整字段见数据库契约。
 
 ## 概念 ER 图
 
@@ -13,6 +13,10 @@ erDiagram
     RESOURCE_TYPE ||--o{ RESOURCE_UNIT : contains
     RESOURCE_TYPE ||--o{ PRICE_RULE : priced_by
     CUSTOMER_ORDER ||--|{ ORDER_ITEM : contains
+    CUSTOMER_ORDER ||--o{ ORDER_PACKAGE : purchases
+    PACKAGE_OFFER ||--o{ ORDER_PACKAGE : snapshotted_as
+    PACKAGE_OFFER ||--|{ PACKAGE_COMPONENT : defines
+    ORDER_PACKAGE ||--|{ ORDER_ITEM : groups
     ORDER_ITEM ||--o| LODGING_RESERVATION : reserves
     RESOURCE_UNIT ||--o{ LODGING_RESERVATION : occupied_by
     ORDER_ITEM ||--o| SKI_BOOKING : purchases
@@ -34,7 +38,8 @@ erDiagram
 
 - 用户与角色 M:N，经 `user_role` 分解。
 - 营地—资源类型—具体资源均为 1:N。
-- 订单与明细 1:N；一种明细至多对应一个同类型业务占用。
+- 订单与明细 1:N；一个订单可包含多间住宿和多类商品，一种明细至多对应一个同类型业务占用。
+- 订单与成交套餐快照 1:N；套餐包含多个订单项，单选项不属于套餐。
 - 住宿资源与预订 1:N，但有效时间范围不得重叠。
 - 场次/时段与购买记录 1:N，数量和不得超过容量。
 - 装备型号与资产 1:N；租赁和具体资产 M:N，经分配表分解。
@@ -46,6 +51,7 @@ erDiagram
 - `APP_USER(user_id)`，候选码 `email`。
 - `RESOURCE_UNIT(resource_unit_id)`，候选码 `(resource_type_id, code)`。
 - `CUSTOMER_ORDER(order_id)`，候选码 `order_no`。
+- `ORDER_PACKAGE(order_package_id)`，外码 `order_id/package_offer_id`。
 - `ORDER_ITEM(order_item_id)`，外码 `order_id`。
 - `LODGING_RESERVATION(reservation_id)`，候选码 `order_item_id`。
 - `SKI_SESSION(ski_session_id)`，候选码 `(ski_product_id,start_at)`。
@@ -59,7 +65,7 @@ erDiagram
 2. 复合码关系（如 `user_role`、`price_rule_weekday`）的非键属性若存在，依赖整个复合码。
 3. 资源类型属性不重复存入具体资源，角色名称不存入用户，装备型号属性不存入每条租赁，消除传递依赖。
 4. 订单商业信息与业务占用分离；所有占用通过 `order_item_id` 回溯同一订单，不建立重复订单主表。
-5. 价格快照、订单项目名称快照和容量计数是有理由的历史/性能冗余：分别保证历史不可变和并发更新效率。它们必须由事务维护，并在报告中说明。
+5. 价格快照、套餐快照、订单项目名称快照和容量计数是有理由的历史/性能冗余：分别保证历史不可变和并发更新效率。它们必须由事务维护，并在报告中说明。
 
 ## 一致性检查结论
 

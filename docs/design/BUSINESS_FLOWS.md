@@ -8,20 +8,21 @@ sequenceDiagram
     participant UI as React
     participant API as BookingService
     participant DB as PostgreSQL
-    C->>UI: 选择模式、时段、人数
+    C->>UI: 选择多间住宿、套餐和单选商品
     UI->>API: 查询可用资源/报价
     API->>DB: 开放规则+维修+有效占用+价格规则
     DB-->>API: 可用资源和逐日价格
-    API-->>UI: quoteToken+价格解释
+    API-->>UI: 价格预览+逐项解释
     C->>UI: 确认下单
     UI->>API: POST /orders
-    API->>DB: BEGIN; 重算价格; 插入订单/明细/占用
-    DB-->>API: 排斥约束成功或冲突
+    API->>DB: BEGIN; 按固定顺序锁定全部资源; 重算价格
+    API->>DB: 插入订单/套餐快照/明细/全部占用
+    DB-->>API: 全部成功或任一冲突
     API->>DB: COMMIT
     API-->>UI: 待支付订单/过期时间
 ```
 
-并发最终防线是数据库排斥约束，不依赖“查询时显示可用”。
+并发最终防线是住宿/资产排斥约束和容量/库存行锁，不依赖“查询时显示可用”。任一购物车项目失败则整单回滚。
 
 ## 2. 模拟支付
 
@@ -85,3 +86,18 @@ stateDiagram-v2
 ## 6. 核销
 
 读取二维码/文本码 → 哈希查找令牌 → 锁令牌 → 检查有效期、状态和适用时段 → 写核销事件 → 状态改 USED。唯一约束和行锁保证重复扫描只能一次成功。
+
+## 7. 混合购物车锁顺序
+
+```text
+幂等键/用户请求
+  → 住宿资源ID升序（排斥约束）
+  → 滑雪场次ID升序（FOR UPDATE）
+  → 缆车时段ID升序（FOR UPDATE）
+  → 批量装备型号ID升序（FOR UPDATE）
+  → 单件资产ID升序（排斥约束）
+  → 价格与套餐优惠快照
+  → 订单提交
+```
+
+固定顺序降低混合订单并发死锁风险。v1只允许整单取消；各明细可在不同日期分别履约，但共享一次付款。

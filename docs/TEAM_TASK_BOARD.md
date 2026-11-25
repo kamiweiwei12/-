@@ -1,13 +1,13 @@
 # 两人团队任务板
 
-状态说明：`DONE`、`IN_REVIEW`、`BLOCKED`、`TODO`。当前负责人全部保持 `UNASSIGNED`；“推荐角色”仅表示候选分工。
+状态说明：`DONE`、`IN_REVIEW`、`BLOCKED`、`TODO`。A已确认为朱承威，B已确认为袁顺熙；具体任务在创建对应feature分支时再从 `UNASSIGNED` 改为姓名，避免把推荐分工误写为已开工。
 
 | ID | 任务 | 优先级 | 依赖 | 推荐角色 | 当前负责人 | 状态 | 验收标准 |
 |---|---|---|---|---|---|---|---|
 | GOV-01 | 第一阶段需求/架构/ER/契约草案 | P0 | 无 | 共同 | UNASSIGNED | DONE | 文档、参考研究和两次基线提交存在 |
 | GOV-02 | GitHub接入main/develop | P0 | GOV-01 | 共同 | UNASSIGNED | DONE | 本地分支跟踪远端且提交SHA一致 |
-| GOV-03 | 确认18项决策 | P0 | GOV-01 | 共同 | UNASSIGNED | BLOCKED | 用户集中确认，记录选择和理由 |
-| GOV-04 | 冻结DB/API/ENUM v1 | P0 | GOV-03 | 共同 | UNASSIGNED | BLOCKED | 三份契约一致并生成CONTRACT_FREEZE.md |
+| GOV-03 | 确认18项决策 | P0 | GOV-01 | 共同 | 朱承威/袁顺熙 | DONE | 用户集中确认，记录选择和理由 |
+| GOV-04 | 冻结DB/API/ENUM v1 | P0 | GOV-03 | 共同 | 朱承威/袁顺熙 | IN_REVIEW | 三份契约一致并生成CONTRACT_FREEZE.md；待 PR 评审并合并至 `develop` |
 | INF-01 | 初始化Spring Boot/Maven | P0 | GOV-04 | A | UNASSIGNED | TODO | Java21构建和基础JUnit通过 |
 | INF-02 | PostgreSQL Docker Compose | P0 | GOV-04 | A | UNASSIGNED | TODO | 健康检查通过，数据卷/环境变量说明完整 |
 | INF-03 | MyBatis/Flyway连接 | P0 | INF-01, INF-02 | A | UNASSIGNED | TODO | 空库迁移成功，禁用自动DDL |
@@ -35,4 +35,4 @@
 
 ## 领取规则
 
-负责人只能在双方确认分工后从 `UNASSIGNED` 改为成员姓名；领取前更新 `develop`，在任务卡记录计划使用的Flyway版本和feature分支。任务未满足验收标准不得改为DONE。
+领取任务前更新 `develop`，在任务卡记录计划使用的Flyway版本和feature分支，并将当前负责人改为成员姓名。任务未满足验收标准不得改为DONE。
