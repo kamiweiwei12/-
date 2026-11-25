@@ -18,7 +18,7 @@
 | Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
 |---|---|---|---|---|
 | contract-change | `.agents/skills/contract-change/SKILL.md` | 适用：批准结果修改DB/API/ENUM和业务流程契约 | 完整读取；核对四类事实源、原始选项和批准边界；保留历史选项；完整diff自检时纠正未获批准的混合外键方案；保持v1.0-rc | APPLIED；静态证据见TE-20261125-09，正式正确性待PR Review |
-| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：本轮将进行feature分支提交与推送 | 完整读取；确认授权分支、HEAD、远端同步状态；未改main/develop、未改历史、未创建或合并PR | APPLIED；提交/推送证据在实际执行后追加 |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：本轮进行feature分支提交与推送 | 完整读取；确认授权分支、HEAD、远端同步状态；创建并推送 `df0e33c`；远端核对main/develop未变；未改历史、未创建或合并PR | APPLIED；证据见TE-20261125-11 |
 | test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：需记录批准同步的真实验证 | 完整读取；工具输出截断的组合检查未记PASS，改为拆分重跑；记录命令、环境、输出摘要、退出码；运行时测试记NOT RUN | APPLIED |
 | skill-creator | 未读取 | 不适用：本轮没有创建或修改Skill | 记录不适用原因，无执行步骤 | NOT APPLICABLE |
 

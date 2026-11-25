@@ -92,3 +92,10 @@ git diff --check
 ```
 
 第一次组合静态检查的工具输出因显示上限截断，未据此宣称PASS；随后拆分命令重跑并记录可见输出和退出码。完整diff自检发现草稿曾将D-001/B与复合外键混合，已在提交前纠正为批准的纯方案B。
+
+### 提交与推送结果
+
+- 主提交：`df0e33cbc67bafcef546692334f6b47145f6d6a7`，信息 `docs(contract): approve D-001 and D-002`，16个文件、127行新增、29行删除；提交命令退出码0。
+- 推送：`git push origin feature/collaboration-prep`，远端从 `131ec98` 前进到 `df0e33c`，退出码0。
+- 推送后核对：ahead/behind为 `0 0`；远端feature为 `df0e33cbc67bafcef546692334f6b47145f6d6a7`；`main`、`develop` 均保持 `9c9cd3c8bbc7391da9638140a47bd6d92175ef57`。
+- 本段证据回填将以独立闭合提交保存；该闭合提交SHA以Git历史为准，避免文件自引用自身提交对象。

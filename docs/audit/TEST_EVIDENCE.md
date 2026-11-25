@@ -115,3 +115,13 @@
 | D-001 DDL/发布/报价测试 | NOT RUN | 本轮禁止创建Flyway和业务代码，当前只有候选契约 |
 | D-002调度/时钟/并发测试 | NOT RUN | 本轮禁止初始化Spring Boot或实现调度器 |
 | PostgreSQL事务与库存测试 | NOT RUN | 无数据库工程或迁移，本次批准不等于运行时验证 |
+
+## TE-20261125-11：批准同步提交与推送
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-25 +08:00 |
+| 命令 | `git diff --cached --check`；`git commit -m "docs(contract): approve D-001 and D-002"`；`git push origin feature/collaboration-prep`；`git rev-list --left-right --count HEAD...origin/feature/collaboration-prep`；`git ls-remote --heads origin feature/collaboration-prep develop main` |
+| 实际输出摘要 | cached diff check无错误；创建 `df0e33cbc67bafcef546692334f6b47145f6d6a7`；推送 `131ec98..df0e33c`；ahead/behind `0 0`；远端feature指向df0e33c，main/develop仍指向9c9cd3c |
+| 退出码 | 0 |
+| 结论 | PASS：证明批准同步主提交已推送到授权feature分支且未推进main/develop；不证明PR已创建、Review或合并 |
