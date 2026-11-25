@@ -17,6 +17,16 @@
 - 数据库负责不可绕过的完整性：主外键、唯一/检查约束、住宿时间排斥、关键库存不变量。
 - 一个用户体系、一个认证体系、一个订单主表、一个库存流水体系。业务扩展使用订单明细/资源占用表，不新建平行订单系统。
 
+## 2.1 双人及多Codex唯一事实源
+
+- 数据库表、约束和关系以 `docs/DATABASE_CONTRACT.md` 为准。
+- API、DTO、响应和错误码以 `docs/API_CONTRACT.md` 为准。
+- 枚举和状态转换以 `docs/ENUMS.md` 为准。
+- 业务流程以 `docs/design/BUSINESS_FLOWS.md` 及冻结记录为准。
+- 任何成员或Codex不得重新设计第二套用户、认证、订单、库存、支付或价格体系。
+- Mock 数据必须严格符合API契约；后端完成后必须改为真实接口联调。
+- 核心共享表或API变更必须先提交设计变更，经另一成员确认后再实现。
+
 ## 3. 代码规范
 
 - Java 包名暂定 `edu.sysu.snowfield`；类名 PascalCase，方法/变量 camelCase。
@@ -52,6 +62,9 @@
 - 提交格式：`type(scope): summary`，如 `docs(contract): define booking states`。
 - 每次提交只包含一个可审查单元；提交前检查 `git diff --check` 和测试。
 - 禁止 `git reset --hard`、强推共享分支、直接修改他人未合并工作。
+- 每个开发任务先 `git fetch origin`，切换 `develop` 并执行 `git pull --ff-only`，再创建自己的 `feature/*` 分支。
+- 禁止从过期feature分支继续派生新模块；禁止两个成员在同一feature分支并行提交未协调的公共文件。
+- `main` 只接受从已验证 `develop` 发起的版本PR；日常feature PR目标为 `develop`。
 
 ## 7. 两人职责
 

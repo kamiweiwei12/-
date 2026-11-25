@@ -26,6 +26,8 @@ Snowfield Four-Season Resort Management System 是中山大学数据库系统课
 - [团队协作](docs/TEAM_WORKFLOW.md)
 - [开发和测试计划](docs/DEVELOPMENT.md)
 - [第一阶段评审包与待确认项](docs/PHASE1_REVIEW.md)
+- [第2阶段18项决策确认清单](docs/PHASE2_DECISIONS.md)
+- [两人团队任务板](docs/TEAM_TASK_BOARD.md)
 
 ## 计划中的工程结构
 
