@@ -166,4 +166,3 @@ weather_alert(alert_id PK, campground_id FK, severity, start_at, end_at, title, 
 3. 待支付占用有效期建议15分钟，是否确认。
 4. DAY_PASS 默认时段（建议09:00–18:00）是否按资源配置。
 5. 批量装备是否允许同一型号同时存在部分单件追踪；建议一个型号固定一种 tracking_mode。
-

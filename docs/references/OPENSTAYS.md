@@ -1,7 +1,7 @@
 # OpenStays 研究
 
-仓库：https://github.com/murdawkmedia/openstays  
-核查提交：`d77156c7f72aa0798aaa6e789a5a58e417ee6b0f`（2026-11-14）  
+仓库：https://github.com/murdawkmedia/openstays
+核查提交：`d77156c7f72aa0798aaa6e789a5a58e417ee6b0f`（2026-11-14）
 许可证：MIT。
 
 ## 实际核查范围
@@ -29,4 +29,3 @@
 - schema中季节和取消政策以嵌套数组保存；本课程为3NF需拆为关系表。
 - iCal、真实支付、渠道、邮件、长租、复杂前台运营均超范围。
 - PostgreSQL版使用 `tstzrange`/排斥约束而不是复制 `unitNights` 作为唯一防冲突机制；可按需生成日历视图。
-

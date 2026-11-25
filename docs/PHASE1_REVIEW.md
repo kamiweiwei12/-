@@ -59,4 +59,3 @@
 ## 5. 下一阶段执行任务
 
 确认上述项目后：创建 `develop`；初始化 Spring Boot/MyBatis/Flyway 和 React/Vite；建立 PostgreSQL Compose；实现最小 V1 用户/角色和 V2 资源/价格/订单基础迁移；以真实PostgreSQL迁移测试作为第一道门禁。不得同时启动全部业务模块。
-

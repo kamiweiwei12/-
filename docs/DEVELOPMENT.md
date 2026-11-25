@@ -54,4 +54,3 @@ docker compose up -d db
 - A：建立 Spring Boot、Flyway/PostgreSQL、V1基础字典与用户权限、迁移测试。
 - B：建立 React/Vite/Ant Design、路由和 API client，依据契约实现登录/错误状态骨架。
 - 共同：审查本阶段18项确认问题，冻结 `DATABASE_CONTRACT v1`、`API_CONTRACT v1`、`ENUMS v1`。
-

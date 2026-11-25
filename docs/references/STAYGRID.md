@@ -1,7 +1,7 @@
 # StayGrid 研究
 
-仓库：https://github.com/smitroy4/StayGrid  
-核查提交：`5ce03543ba6b15e1bd30e8c3dcddf5e4c687c0a3`（2026-09-24）  
+仓库：https://github.com/smitroy4/StayGrid
+核查提交：`5ce03543ba6b15e1bd30e8c3dcddf5e4c687c0a3`（2026-09-24）
 许可证：MIT。
 
 ## 实际核查范围
@@ -35,4 +35,3 @@
 - 不使用JPA自动建表、Stripe、Gemini或定时重算未来一年全量价格。
 - 课程版采用配置化规则、确定优先级和订单价格快照；初期不做占用率动态定价。
 - 住宿具体资源优先采用 PostgreSQL range 排斥，而票务/批量容量采用行锁。
-

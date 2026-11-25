@@ -1,7 +1,7 @@
 # Louez 研究
 
-仓库：https://github.com/Synapsr/Louez  
-核查提交：`f7b78f9c69c9c149873e495f5efaee4b018e945c`（2026-11-21）  
+仓库：https://github.com/Synapsr/Louez
+核查提交：`f7b78f9c69c9c149873e495f5efaee4b018e945c`（2026-11-21）
 许可证：AGPL-3.0。NOTICE/README 说明 Nucleo 图标不在仓库许可证内，另有 `rembg`/模型许可。
 
 ## 实际核查范围
@@ -35,4 +35,3 @@
 ## 本项目结论
 
 采纳概念模型：`equipment_model`、`equipment_asset`、维修区间、租赁资产分配、取还/维修流水；在自己的 Spring/MyBatis/PostgreSQL 架构中从零实现。
-

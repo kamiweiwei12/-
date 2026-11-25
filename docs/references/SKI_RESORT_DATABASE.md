@@ -1,7 +1,7 @@
 # Ski Resort Database 研究
 
-仓库：https://github.com/sdeery14/ski-resort-database  
-核查提交：`145f289bbeb1d4e08c1132d6bd3edff655c5d1cd`（2024-06-28）  
+仓库：https://github.com/sdeery14/ski-resort-database
+核查提交：`145f289bbeb1d4e08c1132d6bd3edff655c5d1cd`（2024-06-28）
 许可证：MIT，LICENSE 明确存在。
 
 ## 实际核查范围
@@ -33,4 +33,3 @@
 ## 本项目结论
 
 采用“有效期票+业务视图+事务过程”的思想，重新设计为统一订单、票务场次、核销令牌/事件和缆车时段容量；不复制SQL。
-

@@ -1,7 +1,7 @@
 # Ski Station System 研究
 
-仓库：https://github.com/TAB-Sekcja9-Projekt/ski-station-system  
-核查提交：`1336d101b0ccdce44732d38917a387a6cbf466d4`（2025-03-12）  
+仓库：https://github.com/TAB-Sekcja9-Projekt/ski-station-system
+核查提交：`1336d101b0ccdce44732d38917a387a6cbf466d4`（2025-03-12）
 许可证：仓库根目录未发现 LICENSE/COPYING/NOTICE，默认不可复制源码。
 
 ## 实际核查范围
@@ -30,4 +30,3 @@ README描述 React + TypeScript、ASP.NET Core/EF Core/PostgreSQL，并声称售
 - 不复制任何源码，既因许可证缺失，也因业务实现不足。
 - 不采用EF迁移；使用Flyway。
 - 我们的票务、缆车容量、核销和统计必须由自己的关系模式、事务和测试证明。
-

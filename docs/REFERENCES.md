@@ -20,4 +20,3 @@
 - [EXPLAIN](https://www.postgresql.org/docs/current/sql-explain.html)
 
 正式报告引用时应补充访问日期并按学校规定的参考文献格式排版。
-

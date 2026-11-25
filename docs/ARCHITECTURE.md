@@ -92,4 +92,3 @@ flowchart LR
 ```
 
 课程演示可用 Docker Compose 运行数据库，前后端本机运行；最终可增加全栈 Compose，但不作为第一阶段要求。
-

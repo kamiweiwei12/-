@@ -69,4 +69,3 @@ erDiagram
 - 状态枚举：来自单一 `ENUMS.md`。
 - 字段/DTO：API使用 camelCase、数据库使用 snake_case，由Mapper明确映射。
 - 事务：创建和取消跨订单、占用、支付/流水必须单事务。
-

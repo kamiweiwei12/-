@@ -53,4 +53,3 @@ docs/
 ## 本地前置环境
 
 已在启动机器上确认 Git 2.48、Java 21、Node.js 24、npm 11 和 Docker 29 可用。具体版本基线和启动步骤将在第二阶段工程初始化后固定到 [开发文档](docs/DEVELOPMENT.md)。
-
