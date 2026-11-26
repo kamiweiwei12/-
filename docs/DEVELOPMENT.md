@@ -1,17 +1,35 @@
 # 开发计划、环境与风险
 
-## 当前仓库状态（2026-11-25）
+## 当前仓库状态（2026-11-26 更新）
 
-- 启动时目录为空且不是 Git 仓库，无 README、AGENTS、Skills、依赖、数据库或提交历史。
-- 已确认本机 Git 2.48.1、Java 21.0.12、Node.js 24.14.1、npm 11.11.0、Docker 29.6.1 可用。
-- 本阶段初始化 Git 和文档骨架，不安装依赖、不启动数据库、不声称存在业务测试结果。
+- 第一、二阶段已完成：公共契约 `v1.0` 冻结提交在 PR #2 中等待 `Janovo2117` Review（分支保护要求 1 个 approve）。
+- 后端 S1（Boot 4.1.3 骨架）与 S2（MyBatis 4.1.0 + Flyway 12.4.0 + PostgreSQL 16 接入）已完成并真实验证。
+- 前端工程尚未创建。
 
-## 第2阶段状态（2026-11-25）
+## S2 数据库环境（已验证）
 
-- GitHub远端已接入，`main`、`develop` 和协作准备feature分支已推送。
-- 18项业务确认及D-001=B、D-002=A已追加记录，公共契约仍为 `v1.0-rc` 候选版；尚未完成双人Review。
-- A为朱承威（24325352），B为袁顺熙（24325311）。
-- 基础工程尚未初始化，以下构建/运行命令仍不得记录为通过。
+本机开发环境事实：本机已运行原生 `postgresql-x64-18` 服务占用 `0.0.0.0:5432`，因此项目容器的默认端口是 **5433**。
+
+```powershell
+# 1. 准备环境变量（首次）
+Copy-Item .env.example .env
+
+# 2. 启动数据库（映射 5433 -> 容器 5432）
+docker compose up -d db
+
+# 3. 创建隔离测试库 snowfield_test（幂等）
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-db-init.ps1
+
+# 4. 默认构建（不连数据库）
+backend/mvnw -B test
+
+# 5. 数据库集成测试（必须显式 -Pdb）
+backend/mvnw -B -Pdb test
+```
+
+- 开发库 `snowfield`、测试库 `snowfield_test` 分离，测试不得污染开发库。
+- 密码只通过环境变量 `SNOWFIELD_DB_PASSWORD` 注入，不写入仓库。
+- 测试库证据见 `docs/audit/TEST_EVIDENCE.md` TE-20261126-16。
 
 ## 建议工程初始化（第二阶段）
 
@@ -34,16 +52,16 @@
 | 12/29–12/31 | 性能与系统测试 | JMeter、EXPLAIN证据 |
 | 01/01–01/02 | 报告、视频、重装验证 | 3000字报告、干净环境复现 |
 
-## 测试命令（第二阶段建立后）
+## 测试命令（S2 起）
 
 ```powershell
-./mvnw test
-npm --prefix frontend run lint
-npm --prefix frontend run build
+backend/mvnw -B test            # 单元 + 架构测试，不连数据库
+backend/mvnw -B -Pdb test       # 追加真实 PostgreSQL 集成测试（*IT）
+npm --prefix frontend run lint  # 前端工程建立后
 docker compose up -d db
 ```
 
-不得提前把这些命令写成已通过。
+不得提前把尚未执行的命令写成已通过。
 
 ## 主要风险
 

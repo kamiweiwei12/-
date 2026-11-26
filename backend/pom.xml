@@ -21,6 +21,8 @@
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <archunit.version>1.4.1</archunit.version>
+        <!-- MyBatis starter 不在 Boot BOM 中，必须显式锁版本：4.1.0 官方声明对应 Boot 4.1 -->
+        <mybatis-spring-boot.version>4.1.0</mybatis-spring-boot.version>
     </properties>
 
     <dependencies>
@@ -34,6 +36,30 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- 数据访问：MyBatis 4.1.0 官方对应 Boot 4.1（见 docs/ARCHITECTURE.md §7 版本矩阵） -->
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>${mybatis-spring-boot.version}</version>
+        </dependency>
+
+        <!-- PostgreSQL JDBC 驱动：唯一权威数据库 -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Flyway：数据库结构迁移的唯一入口（Boot 4.x 已拆分 starter 与数据库方言模块） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
         <!-- 测试：JUnit + Spring Boot Test -->
@@ -60,4 +86,29 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+          `-Pdb` 才运行真实 PostgreSQL 集成测试（*IT）。
+          默认 `./mvnw test` 不连数据库，保证无数据库环境的构建可复现；
+          数据库证据必须由显式 `./mvnw -B -Pdb verify` 产出，不得用默认构建冒充（AGENTS.md §8）。
+        -->
+        <profile>
+            <id>db</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/*Test.java</include>
+                                <include>**/*IT.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

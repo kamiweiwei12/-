@@ -254,3 +254,65 @@
 | 输出摘要 | 无空白/冲突错误输出 |
 | 退出码 | 0 |
 | 结论 | PASS：本轮仅新增/修改文档与 Skill，无业务、数据库、并发测试需求（NOT NEEDED） |
+
+## TE-20261126-13：S2 依赖解析（MyBatis 4.1.0 / Flyway / PostgreSQL 驱动）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:09–23:10 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `eb67a1d` |
+| 环境 | Windows；JDK 21.0.12；Maven 3.9.16（Wrapper 缓存）；Maven Central 联网 |
+| 命令 | `<maven>/mvn.cmd -B dependency:tree`（backend 目录） |
+| 输出摘要 | `mybatis-spring-boot-starter:4.1.0`、`mybatis:3.5.19`、`mybatis-spring:4.1.0`、`postgresql:42.7.14`、`spring-boot-starter-flyway:4.1.3`、`flyway-core:12.4.0`、`flyway-database-postgresql:12.4.0`；`BUILD SUCCESS` |
+| 退出码 | 0 |
+| 结论 | PASS：依赖可从 Maven Central 真实解析，版本与 `docs/ARCHITECTURE.md` §7 版本矩阵一致。仅证明「可解析」，不证明运行时兼容，后者见 TE-20261126-16 |
+
+## TE-20261126-14：首次运行数据库集成测试失败（保留失败记录）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:11 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` |
+| 命令 | `mvn -B -Pdb verify` |
+| 失败摘要 | `FlywaySqlUnableToConnectToDbException` → `PSQLException`，`SQL State: 28P01`（password authentication failed for user "snowfield"）；`AppUserMapperIT` 6 errors、`FlywayMigrationIT` 9 errors |
+| 退出码 | 非 0 |
+| 根因（已定位） | 本机存在原生 PostgreSQL 18 服务（`postgresql-x64-18`，`D:\PostgreSQL`，PID 11152）监听 `0.0.0.0:5432`，与 Docker 容器端口映射冲突。Java 的 JDBC 连接实际到达本机 PG 18 实例而非容器，故密码必然不匹配。另发现 `localhost` 在 Windows 先解析为 `::1`，会命中 `pg_hba` 的 `scram-sha-256` 规则而非 `127.0.0.1` 的 `trust` 规则，加剧不一致 |
+| 处置 | 将容器端口由 5432 改为 5433（`${POSTGRES_PORT:-5433}`），JDBC URL 显式使用 `127.0.0.1:5433`；经原生 JDBC 探针确认两库均可连接。未修改、未停止本机原生 PostgreSQL 18 服务 |
+| 结论 | FAIL（保留），复测见 TE-20261126-16 |
+
+## TE-20261126-15：真实 PostgreSQL 连通性探针（根因确认）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:21 +08:00（Asia/Shanghai） |
+| 命令 | `java -cp postgresql-42.7.14.jar T3.java`（JDK 21 单文件源码模式） |
+| 输出摘要 | `OK jdbc:postgresql://127.0.0.1:5433/snowfield_test db=snowfield_test`；`OK jdbc:postgresql://127.0.0.1:5433/snowfield db=snowfield` |
+| 退出码 | 0 |
+| 结论 | PASS：5433 端口下两个库均以 `snowfield` 账号 + `.env.example` 占位密码连接成功，证明 TE-20261126-14 的 28P01 由端口冲突而非代码或配置引起 |
+
+## TE-20261126-16：S2 数据库集成测试复测（Flyway + MyBatis + 约束；含默认构建）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:22–23:24 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` |
+| 环境 | Windows；JDK 21.0.12；Maven 3.9.16；Docker 29.6.1；容器 `snowfield-db`（`postgres:16-alpine`，PostgreSQL 16.16，healthy，映射 `0.0.0.0:5433->5432`）；测试库 `snowfield_test` 由 `scripts/test-db-init.ps1` 创建 |
+| 命令 A | `mvn -B -Pdb test`（`db` profile 才包含 `*IT`） |
+| 命令 A 输出摘要 | `Migrating schema "public" to version "1 - baseline"`；`Successfully applied 1 migration to schema "public", now at version v1 (execution time 00:00.088s)`；`ArchitectureTest` 8、`ApiResponseTest` 2、`GlobalExceptionHandlerTest` 3、`AppUserMapperIT` 6、`FlywayMigrationIT` 9；合计 `Tests run: 28, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 命令 A 退出码 | 0 |
+| 命令 B | `mvn -B test`（默认构建，不连数据库） |
+| 命令 B 输出摘要 | `Tests run: 14, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 命令 B 退出码 | 0 |
+| 隔离性核对 | `snowfield`（开发库）`public` schema 表数 = `0`；`snowfield_test` 的 `flyway_schema_history` = `1|baseline|t` |
+| 结论 | PASS：证明 MyBatis 4.1.0 + Boot 4.1.3 + PostgreSQL 16 + Flyway 12.4.0 在 Java 21 下真实可用；V1 迁移在空测试库成功执行；唯一约束 `uq_app_user_email`、检查约束 `ck_app_user_email_lower`/`ck_app_user_status`、外键 `fk_user_role_user`、复合主键 `pk_user_role` 均能拒绝非法数据；失败语句不残留行；`#{}` 参数绑定生效。测试库与开发库隔离成立 |
+| 验证边界 | 本证据只覆盖 `app_user`/`role`/`user_role` 三张表与连通链路；营地/资源/价格/订单/库存等契约表 **NOT RUN**；并发、幂等、性能测试 **NOT RUN**（S3/S4 范围） |
+
+## TE-20261126-17：本任务未运行的测试
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| 并发预订 / 超卖 | NOT RUN | 无业务表与业务用例 |
+| 订单幂等 / 支付 | NOT RUN | S4 范围 |
+| Spring Security / JWT | NOT RUN | S4 范围 |
+| 前端 lint/build | NOT RUN | 本次未触碰 `frontend/` |
+| JMeter / EXPLAIN 性能 | NOT RUN | 无真实业务数据 |

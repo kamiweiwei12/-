@@ -14,7 +14,9 @@ services:
       TZ: Asia/Shanghai
       PGTZ: Asia/Shanghai
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # 默认 5433 而非 5432：开发者本机常已装原生 PostgreSQL 占用 5432，
+      # 会造成「连到了本机实例而不是容器」的误判。改容器端口可彻底隔离。
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - snowfield_pgdata:/var/lib/postgresql/data
     healthcheck:

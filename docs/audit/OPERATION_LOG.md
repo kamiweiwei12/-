@@ -238,3 +238,40 @@ git diff -- <contract files>
 | 测试 | `git diff --check` 退出码 0；无业务/数据库/并发测试（文档治理任务，NOT NEEDED） |
 | 结果 | 治理 Skill 落盘并通过 `AGENTS.md` 强制触发；开发日志入口建立；未触碰业务/契约/数据库/GitHub 权限 |
 | 风险 | 无业务风险；未推送、未建 PR、未合并（等人工审查） |
+
+## OP-20261126-05：S2 数据库环境与 MyBatis/Flyway 接入验证
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:05–23:30 +08:00（Asia/Shanghai） |
+| 任务 | 执行上一轮盘点建议：收编游离的 compose/env 文件；接入 MyBatis 4.1.0 + Flyway + PostgreSQL，并在真实 PostgreSQL 上验证；解除 CHANGELOG「Known limitations」中的待验证项 |
+| 分支 | `feature/database-core`，开始 HEAD `d59c796`；工作区含未跟踪 `.env.example`、`.workbuddy/`、`docker-compose.yml` |
+| 用户授权 | 用户指示「除影响双方合并的内容外，不随意触发队友 Review，其余按建议执行」。本轮全部为 A 侧后端/数据库自检，不含公共契约修改，因此**不请求队友 Review、不创建 PR** |
+| 修改文件 | 新增 `scripts/test-db-init.ps1`、`backend/src/main/resources/db/migration/V1__baseline.sql`、`backend/src/test/resources/application-test.yml`、`backend/src/test/java/edu/sysu/snowfield/support/{AbstractPostgresIntegrationTest,FlywayMigrationIT}.java`、`backend/src/main/java/edu/sysu/snowfield/identity/infrastructure/persistence/{AppUserRecord,AppUserMapper}.java`、`backend/src/test/java/edu/sysu/snowfield/identity/infrastructure/persistence/AppUserMapperIT.java`；修改 `backend/pom.xml`、`backend/src/main/resources/application.yml`、`backend/src/test/java/edu/sysu/snowfield/SnowfieldApplicationTests.java`、`docker-compose.yml`、`.env.example` |
+| 操作 | 先提交命名的 compose/env 收编（`eb67a1d`）；接入依赖并真实解析（TE-13）；首次集成测试失败并定位根因（TE-14）；用原生 JDBC 探针确认端口冲突（TE-15）；改容器端口 5433 后复测全绿（TE-16） |
+| Skill | `project-governance`（启动检查/任务分类/文档同步/结束闭环）、`git-pr`（分支、提交、未推送未开 PR）、`test-evidence`（失败与复测均追加，不覆盖）；`contract-change` 不适用（未改 DB/API/ENUM 三份契约条文，V1 是其 §2「身份与权限」的落地子集） |
+| 测试 | `mvn -B -Pdb test` → 28 测试全绿，BUILD SUCCESS，退出码 0；`mvn -B test` → 14 测试全绿，退出码 0；开发库表数 0、测试库 Flyway 记录 `1|baseline|t` |
+| 结果 | MyBatis 4.1.0 + Boot 4.1.3 + PostgreSQL 16 + Flyway 12.4.0 真实链路打通；V1 基线迁移可在空测试库执行；约束反例测试通过；未触碰公共契约、未推送、未开 PR |
+| Commit | 收编提交 `eb67a1d`；本轮主线提交 SHA 以 `git log -1` 为准，不在文件内自引用 |
+| 风险 | ① 本机原生 PostgreSQL 18 占用 5432，已将容器改到 5433，其他人克隆后须同步 `.env` 的 `POSTGRES_PORT`；② `V1__baseline.sql` 只覆盖身份与权限三张表，其余契约表待 S3；③ 首次集成测试失败已保留为 TE-20261126-14，不隐藏 |
+
+### 已实际执行的关键命令
+
+```text
+git add docker-compose.yml .env.example && git commit -m "chore(db): add local postgres compose and env template"
+<wrapper-maven>/mvn.cmd -B dependency:tree
+<wrapper-maven>/mvn.cmd -B -Pdb verify          # 首次失败，见 TE-20261126-14
+java -cp postgresql-42.7.14.jar <probe>.java    # 根因确认，见 TE-20261126-15
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-db-init.ps1
+docker compose up -d db                          # POSTGRES_PORT=5433
+<wrapper-maven>/mvn.cmd -B -Pdb test            # TE-20261126-16，28 测试通过
+<wrapper-maven>/mvn.cmd -B test                 # 默认构建，14 测试通过
+git diff --check
+```
+
+### 环境事实（供后续会话复用）
+
+- 本机已运行原生 `postgresql-x64-18` 服务（`D:\PostgreSQL`），占用 `0.0.0.0:5432`。
+- 项目 PostgreSQL 容器 `snowfield-db`（`postgres:16-alpine`）映射 `5433->5432`，命名卷 `snowfield_pgdata`。
+- 数据库账号 `snowfield`，密码取 `.env.example` 占位值；开发库 `snowfield`、测试库 `snowfield_test`。
+- 集成测试必须用 `-Pdb`；默认 `./mvnw test` 不连库。

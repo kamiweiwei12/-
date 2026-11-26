@@ -63,3 +63,14 @@
 | contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：未修改 DB/API/ENUM 契约 | 记录不适用原因 | NOT APPLICABLE |
 | git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：记录分支/HEAD/diff 检查 | 记录 branch/HEAD/status；`git diff --check` | APPLIED |
 | test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：记录本轮检查证据 | 记录命令与退出码；业务测试 NOT NEEDED | APPLIED |
+
+## SC-20261126-05
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：本轮为实质性后端/数据库开发 | 完整读取；执行启动检查（分支/HEAD/工作树/远端/PR/分支保护）；任务分类 `FEAT`+`DB`+`TEST`；风险判断（不触碰公共契约，故不请求队友 Review）；按 §13 逐项闭环并更新开发日志、任务板、CHANGELOG、TEST_EVIDENCE、OPERATION_LOG、本文件 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：本轮提交 `eb67a1d` 及主线提交 | 完整读取；确认授权分支 `feature/database-core`；只暂存明确文件；`git diff --check`；语义化提交；**未推送、未建 PR、未合并、未改分支保护** | APPLIED；证据见 OP-20261126-05 |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：本轮执行真实构建与数据库集成测试 | 完整读取；运行前记录命令与环境；首次失败记录为 TE-20261126-14 并保留；复测追加 TE-20261126-16，不覆盖失败；未运行项 TE-20261126-17 明确标 NOT RUN；记录真实退出码 0 | APPLIED |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：本轮未修改 `DATABASE_CONTRACT.md`/`API_CONTRACT.md`/`ENUMS.md` 条文 | 记录不适用原因：`V1__baseline.sql` 是既有契约「身份与权限」节的落地实现，未新增或变更契约语义；D-005 等仍待 PR #2 评审 | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
