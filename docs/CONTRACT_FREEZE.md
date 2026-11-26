@@ -1,17 +1,30 @@
-# 公共契约候选冻结记录
+# 公共契约冻结记录
 
-## 当前候选状态
+## 当前状态
 
-- 候选形成日期：2026-11-25（Asia/Taipei记录；营地业务时区为Asia/Shanghai）。
-- 当前版本：`Snowfield Contract v1.0-rc`。
-- 数据库设计：`DATABASE_CONTRACT v1.0-rc`。
-- REST API：`API_CONTRACT v1.0-rc`，基础路径 `/api/v1`。
-- 枚举：`ENUMS v1.0-rc`。
-- 概念/逻辑设计：`DATABASE_DESIGN v1.0-rc`。
-- 决策来源：历史提案见 `PHASE2_DECISIONS.md`，追加确认见 `PHASE2_CONFIRMATIONS.md`。
-- Review状态：`NOT APPROVED`；尚无另一成员真实 PR Review。
+- 当前版本：`Snowfield Contract v1.0`（**FROZEN**，2026-11-26 冻结）。
+- 数据库设计：`DATABASE_CONTRACT v1.0`。
+- REST API：`API_CONTRACT v1.0`，基础路径 `/api/v1`。
+- 枚举：`ENUMS v1.0`。
+- 概念/逻辑设计：`DATABASE_DESIGN v1.0`。
+- 决策来源：历史提案见 `PHASE2_DECISIONS.md`，追加确认见 `PHASE2_CONFIRMATIONS.md`，缺口决策见 `audit/DECISION_LOG.md`（D-001..D-005）。
+- Review状态：`APPROVED`；由 `Janovo2117` 在 PR #1 中批准。
 
-候选冻结只表示实现暂缓等待审查；不得描述为正式批准，也不得据此开始工程初始化。
+## 冻结证据（可外部核验）
+
+| 项 | 值 |
+|---|---|
+| Pull Request | #1 `Feature/collaboration prep` |
+| 来源 / 目标分支 | `feature/collaboration-prep` → `develop` |
+| Reviewer / 结论 | `Janovo2117` / `APPROVED` |
+| Review 时间（审查对象） | 2026-11-26 20:36:10 +08:00（commit `01a8d34`） |
+| 未解决 Request changes | 无 |
+| 合并时间 | 2026-11-26 20:47:47 +08:00 |
+| 合并提交 | `3404221acc196dcbff026e0e1ad75854157358cc`（merge commit，双亲 `9c9cd3c` + `01a8d34`） |
+| 分支保护 | `main`、`develop` 已保护：要求 1 个批准、管理员同样受限、禁止强推 |
+| 冻结后 `develop` | `3404221`；`main` 保持发布基线 `9c9cd3c` |
+
+冻结表示契约内容已获另一成员在 PR 中批准并可据此实现；**不等于**任何业务功能已完成，也不等于测试通过。工程实现仍须按 `DEVELOPMENT.md` 的门禁逐项产出真实测试证据。
 
 ## 已确认的关键决定
 
@@ -49,8 +62,8 @@
 - 混合购物车增加锁顺序和事务时长，必须通过固定锁顺序及并发测试验证。
 - 套餐固定总价如何分摊到各订单项关系到退款；v1不做部分退款，仍需保存可解释分摊快照以支持报告。
 - 多间房同单需要验证同一 `resource_unit_id` 不能在请求中重复，并对所有住宿逐项保存价格快照。
-- 成员B（`Janovo2117`）已在协作者列表中以 `write` 角色出现且无待接受邀请，写入权限可核验；但 GitHub 上尚无任何 PR Review 活动，因此双人审查仍未完成。`main`/`develop`/`feature/*` 三条分支均未设置分支保护（R5-03），真实 Review 门禁尚未由平台强制。
-- `D-001` 已批准方案B（允许全营地住宿模式价格规则）；`D-002` 已批准方案A（后端定时扫描逾期租赁）。两项已同步进v1.0-rc，但仍等待另一成员在正式PR中审查。
+- 成员B已具备 `write` 权限并在 PR #1 中完成真实 Approve；但该 Review 正文仅一个词，未对 D-001 的服务层完整性、D-002 的调度语义、R5-04 等被点名的风险逐项表态。冻结按“无 Request changes”成立，实现阶段仍需以测试而非 Review 意见兜底。
+- `D-001` 已批准方案B（允许全营地住宿模式价格规则）；`D-002` 已批准方案A（后端定时扫描逾期租赁）；`D-003` 确立 `OccupancyStatus`；`D-004` 确立核销部分唯一索引；`D-005` 允许 `price_rule` 的资源类型与住宿模式同时为空。五项均已进入 v1.0。
 
 ## 契约修改流程
 
@@ -66,3 +79,4 @@
 - `v1.0`（2026-11-25，历史记录）：提交 `2882736` 曾标记为正式冻结，但未完成另一成员 Review；此状态已由本轮审计整改纠正，不作为正式批准证据。
 - `v1.0-rc`（2026-11-25）：候选版，保留多住宿、混合购物车、套餐、单次整单支付、无quoteToken和单规则定价；等待缺口决策与双人Review。
 - `v1.0-rc` 修订2（2026-11-26）：按第二次审计的P1-1/P1-2/P2-1/P2-2/P2-3同步 `design/DATABASE_DESIGN.md` 的候选码与ER关系；按 D-003 新增 `OccupancyStatus` 枚举并把住宿排斥谓词改为 `HELD/CONFIRMED/IN_USE`；按 D-004 新增核销部分唯一索引与 `VerificationResult` 枚举。版本状态仍为候选，未升级为正式冻结。
+- `v1.0`（2026-11-26，**正式冻结**）：PR #1 经 `Janovo2117` Approve 后合入 `develop`，合并提交 `3404221acc196dcbff0260e0e1ad75854157358cc`。内容等同 `v1.0-rc` 修订2，另按 D-005 明确 `price_rule` 允许 `resource_type_id` 与 `stay_mode` 同时为空（全营地全模式规则）。`main`、`develop` 已开启分支保护。

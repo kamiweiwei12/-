@@ -1,6 +1,6 @@
 # 数据库公共契约
 
-状态：`CANDIDATE v1.0-rc`，等待另一成员真实 PR Review。本文是候选实现约束，不得据此宣称正式冻结或开始迁移。
+状态：`FROZEN v1.0`（2026-11-26 冻结，PR #1 经 `Janovo2117` Approve 后合入 `develop`）。本文是实现约束；任何结构变化必须走契约变更流程并新增 Flyway 版本。
 
 ## 1. 全局规则
 
@@ -53,9 +53,11 @@ price_rule_date(price_rule_id PK/FK, service_date PK)
 - `FIXED`：最终价 = `value`。
 - `MULTIPLIER`：最终价 = `base_price × value`。
 - `ADDITION`：最终价 = `base_price + value`。
-- “同一有效报价单元”定义为一个具体的 `(campground_id, resource_type_id, stay_mode, service_date)`。先找出该单元全部匹配规则；若最高 `priority` 上多于一条，则即使规则分别来自全营地、资源类型或日期范围等不同声明范围，也构成冲突。管理端发布检查必须检测规则有效集合的交集；报价端发现冲突返回 `PRICE_RULE_CONFLICT`，不得以创建时间或主键静默选胜者。v1.0-rc不叠加规则。
+- “同一有效报价单元”定义为一个具体的 `(campground_id, resource_type_id, stay_mode, service_date)`。先找出该单元全部匹配规则；若最高 `priority` 上多于一条，则即使规则分别来自全营地、资源类型或日期范围等不同声明范围，也构成冲突。管理端发布检查必须检测规则有效集合的交集；报价端发现冲突返回 `PRICE_RULE_CONFLICT`，不得以创建时间或主键静默选胜者。v1.0 不叠加规则。
 
 `D-001` 已批准采用方案B：允许 `resource_type_id IS NULL AND stay_mode IS NOT NULL`，用于全营地DAY_PASS或OVERNIGHT规则。`stay_mode`始终受公共StayMode枚举/CHECK约束；由于宽范围规则允许资源类型为空，`price_rule` 不对 `(resource_type_id, stay_mode)` 建立复合外键。资源类型级规则在管理端发布时必须校验 `(resource_type_id, stay_mode)` 存在于 `resource_type_stay_mode`，报价查询也必须再次限制为该资源类型实际支持的模式；不得把全营地规则应用到不支持该模式的资源类型。
+
+`D-005` 明确允许 `resource_type_id IS NULL AND stay_mode IS NULL`：该组合表示既不限定资源类型也不限定住宿模式的宽范围规则（例如全线调价），匹配范围覆盖营地下所有资源。此类规则同样遵守“最高优先级唯一胜出”；若与其他规则在最高优先级并列，仍返回 `PRICE_RULE_CONFLICT`，不因范围更宽而优先。`price_rule` 因此**不设置**“至少一项非空”的 CHECK 约束，也不建立复合外键。
 
 ### 套餐目录
 
@@ -69,7 +71,7 @@ package_component(package_component_id PK, package_offer_id FK, item_type, quant
 
 `package_component` 是选购模板，不直接占库存；具体房间、场次、时段和资产在报价/下单时选定。CHECK约束保证每行只有与 `item_type` 对应的一个目标外键非空。套餐可与单选项共同进入一个订单。
 
-`package_offer.code UQ` 在v1.0-rc仅适用于“单营地部署、代码作为外部稳定标识”的边界。若项目启用多营地独立编码，必须先经契约变更将其迁移为 `UQ(campground_id, code)`；不能在同一正式版本中同时声称全局唯一和营地内唯一。
+`package_offer.code UQ` 在 v1.0 仅适用于“单营地部署、代码作为外部稳定标识”的边界。若项目启用多营地独立编码，必须先经契约变更将其迁移为 `UQ(campground_id, code)`；不能在同一正式版本中同时声称全局唯一和营地内唯一。
 
 套餐优惠按组件成交前小计计算：`FIXED_TOTAL` 的优惠为 `max(0, subtotal-pricing_value)`；`DISCOUNT_AMOUNT` 不得超过小计；`DISCOUNT_RATE` 取0到1之间的小数。最终优惠及其按订单项的可解释分摊写入成交快照，但v1不开放部分退款。
 

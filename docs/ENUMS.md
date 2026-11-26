@@ -1,6 +1,6 @@
 # 公共 ENUM 契约
 
-状态：`CANDIDATE v1.0-rc`，等待另一成员真实 PR Review。枚举值在数据库、Java DTO、OpenAPI和TypeScript中必须完全一致。数据库优先使用 `varchar + CHECK`，便于 Flyway 演进；不自行创建同义值。
+状态：`FROZEN v1.0`（2026-11-26）。枚举值在数据库、Java DTO、OpenAPI和TypeScript中必须完全一致。数据库优先使用 `varchar + CHECK`，便于 Flyway 演进；不自行创建同义值。
 
 | 枚举 | 值 |
 |---|---|

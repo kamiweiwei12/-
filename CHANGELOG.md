@@ -37,6 +37,10 @@
 - 核销新增部分唯一索引 `UNIQUE(token_id) WHERE result='ACCEPTED'`，把“同一令牌至多一次成功”下沉到数据库（D-004）。
 - 修正 `API_CONTRACT` 中住宿 `quantity` 的歧义表述：`LodgingSelection` 不提供 `quantity`，房间数量由数组长度表达。
 - `contract-change` Skill 的第5步由“四份事实源”改为8项显式消费者清单，防止ER文档漏同步。
+- 公共契约由 `CANDIDATE v1.0-rc` 升为 **`FROZEN v1.0`**：PR #1 获 `Janovo2117` 真实 Approve 后合入 `develop`（合并提交 `3404221`），四份契约、ER、需求、架构与范围的头部状态同步更新。
+- 按 D-005 明确 `price_rule` 允许 `resource_type_id` 与 `stay_mode` 同时为空，表示全营地全模式宽范围规则；不设“至少一项非空”的 CHECK。
+- `main`、`develop` 开启分支保护：要求 1 个批准、管理员同样受限、禁止强推与删除。
+- 任务板 GOV-04、GOV-05 转 `DONE`；新增 GOV-06 追踪“双人协作链路打通”（仍 `BLOCKED`）。
 
 ### Known limitations
 

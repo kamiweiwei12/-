@@ -210,3 +210,52 @@ git diff -- <contract files>
 
 - 本段全部改动作为**单个提交**进入 `feature/collaboration-prep`，不再拆分为“内容提交+证据回填提交”，以避免重复 P3-1 指出的“一个可审查单元被拆成多个提交”。
 - 提交 SHA 与推送状态不写入文件（提交对象无法在自身内容中自引用），以 `git log -1` 和本轮任务报告为准。
+
+## OP-20261126-03：核验合并并正式冻结契约 v1.0
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 20:48–21:00 +08:00（Asia/Shanghai） |
+| 任务 | 核验 PR #1 合并、分支保护、仓库改名与 Docker 状态；将公共契约由候选升级为 `FROZEN v1.0`；落地 D-005（`price_rule` 双空语义） |
+| 分支 | 新建 `docs/contract-freeze-v1`，起点 `origin/develop` = `3404221acc196dcbff0260e0e1ad75854157358cc` |
+| 修改文件 | `docs/CONTRACT_FREEZE.md`、`docs/DATABASE_CONTRACT.md`、`docs/API_CONTRACT.md`、`docs/ENUMS.md`、`docs/design/DATABASE_DESIGN.md`、`docs/REQUIREMENTS.md`、`docs/ARCHITECTURE.md`、`docs/PROJECT_SCOPE.md`、`docs/PHASE1_REVIEW.md`（仅追加补充说明）、`docs/DEVELOPMENT.md`、`docs/TEAM_TASK_BOARD.md`、`README.md`、`CHANGELOG.md`、`docs/audit/{ISSUES,DECISION_LOG,OPERATION_LOG,TEST_EVIDENCE,SKILL_COMPLIANCE,AUDIT_LOG}.md` |
+| 操作 | 只读核验 GitHub 与本地状态；按 D-005 补契约语义；批量更新 9 处状态声明；追加历史文件指针；回填审计 |
+| Skill | `contract-change`（按8项清单执行）、`git-pr`、`test-evidence`；详见 `SC-20261126-03` |
+| 测试 | 合并提交双亲与树一致性核对、保护规则字段核对、术语残留检索、Markdown链接、`git diff --check`；业务与数据库测试NOT RUN |
+| 结果 | 契约升为 `FROZEN v1.0`；GOV-04/GOV-05 转 DONE；R3-01..R3-09、R4-01 批量关闭；未合并本分支PR |
+| Commit | 本段作为单个提交进入 `docs/contract-freeze-v1`；SHA 以 `git log -1` 为准 |
+| 风险 | Review 正文仅 `good`，未逐条复核；R5-04 的语义由负责人单独裁定（D-005）；回滚为 revert 本分支提交 |
+
+### 外部状态核验（只读）
+
+| 项 | 实测 |
+|---|---|
+| PR #1 | `MERGED`，`mergedAt=2026-11-26T12:47:47Z`（20:47:47 +08:00） |
+| Review | `Janovo2117`，`APPROVED`，`submittedAt=12:36:10Z`，`commit_id=01a8d34`，`reviewDecision=APPROVED` |
+| 合并提交 | `3404221`，双亲 `9c9cd3c` + `01a8d34`；`git diff 01a8d34 origin/develop` 为空 |
+| 分支保护 | `develop`：`required_approving_review_count=1`、`enforce_admins=true`、`allow_force_pushes=false`；`main` 同为 `protected=true` |
+| 仓库改名 | URL 已变为 `github.com/kamiweiwei12/snowfield-resort-system` |
+| 本地远端 | 由 `kamiweiwei12/-.git` 更正为 `snowfield-resort-system.git`；`git ls-remote` 退出码0 |
+| Docker | `docker info --format '{{.ServerVersion}}'` → `29.6.1`，退出码0 |
+
+### 已实际执行的关键命令
+
+```text
+git remote -v / git branch --show-current / git rev-parse HEAD / git status --short --branch
+git fetch origin --prune
+gh pr view 1 --json state,mergedAt,mergeCommit,reviews,reviewDecision
+gh api repos/kamiweiwei12/snowfield-resort-system/branches
+gh api repos/kamiweiwei12/snowfield-resort-system/branches/develop/protection
+git log -1 --format='%H %p %s' origin/develop
+git diff --stat 01a8d34 origin/develop
+git remote set-url origin https://github.com/kamiweiwei12/snowfield-resort-system.git
+docker info --format '{{.ServerVersion}}'
+grep -rn "FROZEN v1.0" --include="*.md" docs/ README.md
+grep -rln "v1.0-rc" --include="*.md" . | grep -v "docs/audit/"
+git diff --check
+```
+
+### 提交与推送结果
+
+- 本段作为单个提交进入 `docs/contract-freeze-v1`，随后推送并创建指向 `develop` 的 PR。
+- SHA 与 PR 编号不写入文件（避免自引用），以 `git log -1` 与任务报告为准。
