@@ -23,6 +23,7 @@
 - 按项目负责人架构审查意见修订架构设计 v2：模块内四层（api/application/domain/infrastructure.persistence）+ 依赖倒置，新增 ArchUnit 强制依赖规则 R1~R13（ADR-006）。
 - 重组为 11 个业务模块（identity/catalog/pricing/booking/order/payment/lodging/winter-activity/rental/verification/reporting），以 `booking` 为唯一编排中心，消除 order↔资源模块循环依赖；新增数据所有权表与安全架构（ADR-007~ADR-010）。
 - 建立后端 S1 工程骨架：Maven Wrapper 3.9.16、Spring Boot 4.1.3、common 统一响应/错误码/全局异常、ArchUnit 架构测试。
+- 建立项目级工程治理 Skill `.agents/skills/project-governance/`（每轮启动机制、文档同步、开发日志、Git/GitHub、队友协作、测试证据、结束闭环），并在 `AGENTS.md` 强制每轮触发。
 
 ### Changed
 

@@ -54,3 +54,12 @@
 | skill-creator | 未读取 | 不适用：本轮未创建或修改 Skill | — | NOT APPLICABLE |
 
 本记录仅证明列出的文件读取与项目内命令执行，不构成独立审计。
+
+## SC-20261126-04
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | 本轮新建 `.agents/skills/project-governance/SKILL.md` | 适用：本轮即按该 Skill 流程自举执行 | 调查状态→创建 Skill→改 AGENTS.md→建开发日志→`git diff --check`→记录审计 | APPLIED（新建并自举） |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：未修改 DB/API/ENUM 契约 | 记录不适用原因 | NOT APPLICABLE |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：记录分支/HEAD/diff 检查 | 记录 branch/HEAD/status；`git diff --check` | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：记录本轮检查证据 | 记录命令与退出码；业务测试 NOT NEEDED | APPLIED |

@@ -224,3 +224,17 @@ git diff -- <contract files>
 | 测试 | `./mvnw -B test`：Spring Boot 4.1.3 上下文加载 + 14 测试通过（首次 4 条 ArchUnit 分层规则因 S1 无 domain/api/infrastructure 包触发 `failOnEmptyShould`，加 `.allowEmptyShould(true)` 后全绿）；业务/数据库/MyBatis/并发测试 NOT RUN |
 | 结果 | 架构设计 v2 已落盘（ADR-006~012）；S1 骨架可复现构建；未创建业务迁移（契约冻结 PR #2 未合并）；提交与推送结果以 git 历史为准 |
 | 风险 | MyBatis 4.1.0/Flyway/PostgreSQL 尚未接入验证；`docker-compose.yml`/`.env.example` 保留为未跟踪（属 S2 DB 环境）；本地 `develop` 落后 origin/develop 12 提交（本次未触碰） |
+
+## OP-20261126-04：建立项目级工程治理 Skill 与开发日志入口
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 22:47–22:5x +08:00（Asia/Shanghai） |
+| 任务 | 按任务书建立项目级工程治理 Skill，并让 `AGENTS.md` 每轮强制触发；建立开发日志入口 |
+| 分支 | `feature/database-core`，开始 HEAD `2bce281`；工作区含未跟踪 `.env.example`、`.workbuddy/`、`docker-compose.yml` |
+| 修改文件 | 新增 `.agents/skills/project-governance/SKILL.md`、`references/document-sync-matrix.md`、`docs/development-log/2026-11.md`；修改 `AGENTS.md`、`CHANGELOG.md`、`docs/audit/*` |
+| 操作 | 调查状态（branch/HEAD/status/gh pr/issue）；创建 Skill 与 reference；改 `AGENTS.md` §0；建开发日志；`git diff --check` |
+| Skill | `project-governance`（本轮新建并自举）；`git-pr`、`test-evidence` 应用；`contract-change` 不适用（未改契约）；详见 `SC-20261126-04` |
+| 测试 | `git diff --check` 退出码 0；无业务/数据库/并发测试（文档治理任务，NOT NEEDED） |
+| 结果 | 治理 Skill 落盘并通过 `AGENTS.md` 强制触发；开发日志入口建立；未触碰业务/契约/数据库/GitHub 权限 |
+| 风险 | 无业务风险；未推送、未建 PR、未合并（等人工审查） |

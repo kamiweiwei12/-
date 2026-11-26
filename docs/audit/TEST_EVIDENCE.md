@@ -243,3 +243,14 @@
 | Flyway/PostgreSQL 迁移 | NOT RUN | 契约冻结（PR #2）未完成，S3 才建迁移 |
 | Spring Security/JWT | NOT RUN | S4 才接入 |
 | 并发/性能测试 | NOT RUN | 无可运行业务 |
+
+## TE-20261126-12：治理 Skill 建立（文档任务）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 22:5x +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `2bce281` |
+| 命令 | `git diff --check` |
+| 输出摘要 | 无空白/冲突错误输出 |
+| 退出码 | 0 |
+| 结论 | PASS：本轮仅新增/修改文档与 Skill，无业务、数据库、并发测试需求（NOT NEEDED） |
