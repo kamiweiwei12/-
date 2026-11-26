@@ -23,3 +23,14 @@
 | skill-creator | 未读取 | 不适用：本轮没有创建或修改Skill | 记录不适用原因，无执行步骤 | NOT APPLICABLE |
 
 本记录仅提供项目内可复核的过程证据，不证明隐藏思考过程，也不替代 `Janovo2117` 的GitHub PR Review。
+
+## SC-20261126-01
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 有限适用：只更正 `CONTRACT_FREEZE.md` 的风险陈述与登记审计条目，未修改DB/API/ENUM/业务流程任何规则条文 | 完整读取；核对四份事实源与版本状态；确认R5-04/R5-05为未见批准证据的歧义，登记为待Reviewer判定而不擅自改契约；保持 `CANDIDATE v1.0-rc` | APPLIED_LIMITED；契约条文未变，证据见TE-20261126-02/04 |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：核查PR、纠正目标分支、提交并推送feature分支 | 完整读取；先记录分支/HEAD/工作区/远端；只读核查PR元数据后，用 `gh pr edit --base develop` 纠正目标分支；未创建Review、未合并、未改分支保护、未改历史 | APPLIED；证据见TE-20261126-03 |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：本轮执行Git/GitHub核查与文档静态检查 | 完整读取；未预填PASS；`git diff --check` 首次因两文件EOF多余空行返回退出码2，修正后重跑；业务与运行时测试均记NOT RUN | APPLIED_WITH_RETRY；证据见TE-20261126-04/05 |
+| skill-creator | 未读取 | 不适用：本轮未创建或修改Skill | 记录不适用原因，无执行步骤 | NOT APPLICABLE |
+
+本记录仅证明列出的文件读取与项目内命令执行，不构成独立审计，也不代表 `Janovo2117` 已完成PR Review。

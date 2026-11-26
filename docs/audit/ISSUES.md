@@ -12,5 +12,10 @@
 | R3-08 | MEDIUM | 单营地模式下package_offer.code全局唯一边界不明 | rc保留全局唯一，仅限单营地外部稳定码；启用多营地前须契约迁移为复合唯一 | DB、冻结记录 | 多营地扩展和外部引用 | 模式审查；后续唯一约束反例测试 | 共同 | RESOLVED_IN_RC；等待Review |
 | R3-09 | CRITICAL | 未经双人Review却标记正式FROZEN v1.0 | 全部相关状态纠正为CANDIDATE v1.0-rc，历史错误保留并追加纠正记录 | 冻结记录、契约、README、计划、任务板 | 是否允许工程初始化 | 全仓状态搜索；PR批准证据 | 共同 | REMEDIATED_IN_RC；正式冻结仍BLOCKED |
 | R4-01 | HIGH | 缺少审计留痕和项目Skill | 建立六类审计文件、三个项目Skill和AGENTS强制规则 | `docs/audit/**`、`.agents/skills/**`、AGENTS | 后续任务可复核性 | quick_validate、链接/diff检查和人工审查 | 共同 | IN_REVIEW |
+| R5-01 | HIGH | 已存在的 PR #1 目标分支为 `main`，违反 AGENTS.md §6「日常 feature PR 目标为 `develop`」 | 将 PR base 改为 `develop`（`gh pr edit`），不新增提交、不改写共享历史 | GitHub PR #1 | 合入路径错误，可能绕过 `develop` 集成 | `gh pr view 1 --json baseRefName` 返回 `develop`；证据TE-20261126-03 | 共同 | REMEDIATED_PENDING_REVIEW |
+| R5-02 | MEDIUM | `OP-20261125-02` 记载“未创建、批准或合并PR”，但 GitHub 显示 PR #1 创建于 `2026-11-25T08:47:47Z`（16:47:47 +08:00），早于该条目记录的 17:05–17:08 | 保留原文不改写，以追加记录纠正 | `docs/audit/OPERATION_LOG.md`、本表 | 审计记录与外部可核验事实不一致 | 对比 GitHub `createdAt` 与条目时间；证据TE-20261126-02 | 共同 | RECORDED_CORRECTED |
+| R5-03 | MEDIUM | `main`、`develop`、`feature/collaboration-prep` 三条分支均未设置分支保护 | 需项目成员在 GitHub 仓库设置中配置保护规则；本代理无此授权，不得自行修改 | GitHub 分支设置 | 可直接推送覆盖，Review 门禁形同虚设 | `gh api repos/.../branches` 的 `protected` 字段；证据TE-20261126-02 | 共同 | OPEN；需人工在 GitHub 配置 |
+| R5-04 | MEDIUM | `price_rule` 未定义 `resource_type_id IS NULL AND stay_mode IS NULL` 的语义：D-001仅批准“资源类型为空且住宿模式非空”，未说明两者同时为空是否合法 | 待 Reviewer 判定：明确为“全营地全模式规则”，或加 CHECK 要求至少一项非空 | `docs/DATABASE_CONTRACT.md` §价格、`docs/audit/DECISION_LOG.md` | 规则匹配范围歧义，可能导致全营地规则被误用 | 契约审查＋后续规则匹配反例测试 | 共同 | OPEN_FOR_REVIEW；未修改契约 |
+| R5-05 | LOW | `lodging_reservation.occupancy_status` 的取值 `PENDING_PAYMENT/CONFIRMED/IN_USE` 未在 `ENUMS.md` 中定义 | 待 Reviewer 判定：复用 `OrderItemStatus`，或新增独立枚举并同步DB/Java/TS | `docs/DATABASE_CONTRACT.md`、`docs/ENUMS.md` | 三层枚举一致性，后续DTO与CHECK生成依据 | 枚举交叉检索；证据TE-20261126-04 | 共同 | OPEN_FOR_REVIEW；未修改契约 |
 
 关闭规则：`RESOLVED_IN_RC` 不是正式关闭；只有另一成员Review、适用测试及合并证据齐全后才可改为 `CLOSED`。

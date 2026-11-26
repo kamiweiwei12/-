@@ -99,3 +99,62 @@ git diff --check
 - 推送：`git push origin feature/collaboration-prep`，远端从 `131ec98` 前进到 `df0e33c`，退出码0。
 - 推送后核对：ahead/behind为 `0 0`；远端feature为 `df0e33cbc67bafcef546692334f6b47145f6d6a7`；`main`、`develop` 均保持 `9c9cd3c8bbc7391da9638140a47bd6d92175ef57`。
 - 本段证据回填将以独立闭合提交保存；该闭合提交SHA以Git历史为准，避免文件自引用自身提交对象。
+
+## OP-20261126-01：核查PR与Review真实状态并纠正目标分支
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 09:42:13–09:47 +08:00（Asia/Shanghai） |
+| 任务 | 按交接指令做只读状态核查；确认PR是否存在、来源/目标分支、Review状态与协作者权限；纠正错误目标分支并回填审计 |
+| 分支 | `feature/collaboration-prep`，开始HEAD `08ff87f1fbb7b511628da5ec22ca26ec873ae6c6`；开始时工作区干净、ahead/behind `0 0` |
+| 修改文件 | `docs/audit/ISSUES.md`、`docs/audit/OPERATION_LOG.md`、`docs/audit/TEST_EVIDENCE.md`、`docs/audit/SKILL_COMPLIANCE.md`、`docs/CONTRACT_FREEZE.md`、`CHANGELOG.md`；未创建代码、迁移、依赖或工程配置，未修改任何契约规则条文 |
+| 操作 | 读取AGENTS.md、三个项目Skill、README/CHANGELOG/冻结记录/确认记录/四份事实源/任务板/审计文件；执行Git与GitHub只读核查；用 `gh pr edit` 纠正PR目标分支；追加审计条目 |
+| Skill | `contract-change`（有限适用：仅更正风险陈述，未改变契约条文）、`git-pr`、`test-evidence` 均完整读取并应用，详见 `SC-20261126-01` |
+| 测试 | Git/GitHub状态核查、PR元数据核查、枚举交叉检索、Markdown内部链接、完整diff与 `git diff --check`；业务/数据库/前端/并发/性能测试NOT RUN |
+| 结果 | PR #1 目标分支由 `main` 纠正为 `develop`；R5-01..R5-05 已登记；契约仍为 `v1.0-rc`；未创建Review、未合并、未改分支保护 |
+| Commit | 本段创建时未提交；实际提交与推送结果在下方追加 |
+| 风险 | 分支保护缺失需人工配置；D-001/D-002仍无另一成员PR Review；R5-04/R5-05为待Reviewer判定的歧义，未擅自改契约；回滚方式为revert本轮追加提交，不改写历史 |
+
+### 核查发现（与交接描述的差异）
+
+1. 交接称“尚未创建PR”，实际 PR #1 已存在且为 `OPEN`，创建于 `2026-11-25T08:47:47Z`（16:47:47 +08:00），早于 `OP-20261125-02` 记录的 17:05–17:08。该条目的“未创建PR”陈述与外部事实不一致，已登记 R5-02，原文不删除，以追加方式纠正。
+2. PR #1 的来源分支正确（`feature/collaboration-prep`），但目标分支为 `main`，违反 AGENTS.md §6；已登记 R5-01 并纠正为 `develop`。
+3. PR 描述正文为空，无指派Reviewer，`reviews` 为空数组，timeline 仅有 `committed` 事件，无CI检查；因此“双人Review已完成”为 `UNVERIFIED`。
+4. `Janovo2117` 在协作者列表中为 `write` 角色，`/invitations` 为空，可核验其邀请已被接受并具备写入/批准权限；但这只证明权限，不证明已实际执行Review。
+5. PR 作者为 `kamiweiwei12` 本人，GitHub 禁止自我Approve，故 `DECISION_LOG.md` 中 D-001/D-002 的批准不构成PR Review证据。
+6. `main`、`develop`、`feature/collaboration-prep` 均 `protected:false`，已登记 R5-03。
+
+### 已实际执行的关键命令
+
+```text
+git branch --show-current
+git rev-parse HEAD
+git status --short --branch
+git remote -v
+git log -6 --decorate --oneline --all --graph
+git rev-list --left-right --count HEAD...origin/feature/collaboration-prep
+git ls-remote --heads origin feature/collaboration-prep develop main
+gh auth status
+gh pr list --repo kamiweiwei12/- --state all --limit 20
+gh pr view 1 --repo kamiweiwei12/- --json <metadata,reviews,reviewRequests,reviewDecision,files>
+gh api repos/kamiweiwei12/-/pulls/1/reviews
+gh api repos/kamiweiwei12/-/issues/1/timeline
+gh api repos/kamiweiwei12/-/collaborators
+gh api repos/kamiweiwei12/-/invitations
+gh api repos/kamiweiwei12/-/branches
+gh pr checks 1
+gh pr edit 1 --repo kamiweiwei12/- --base develop
+git diff --stat 9c9cd3c..HEAD
+```
+
+上述命令均在Git Bash、工作目录 `D:/Will/SYSU/数据库系统原理/大作业` 执行；输出摘要与退出码见 `TEST_EVIDENCE.md` TE-20261126-01..03。
+
+### 目标分支纠正结果
+
+- 实际命令：`gh pr edit 1 --repo kamiweiwei12/- --base develop`，退出码0。
+- 实际效果：PR #1 `baseRefName` 由 `main` 变为 `develop`；该操作只改PR元数据，不新增提交、不改写历史、不需要强制推送。
+- 因 `main` 与 `develop` 均指向 `9c9cd3c8bbc7391da9638140a47bd6d92175ef57`，PR变更内容不变（28文件，+985/−61）。
+
+### 提交与推送结果
+
+- 本段创建时尚未提交，以下结果在证据回填提交中追加，不在此预填。

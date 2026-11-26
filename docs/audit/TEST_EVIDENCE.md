@@ -125,3 +125,58 @@
 | 实际输出摘要 | cached diff check无错误；创建 `df0e33cbc67bafcef546692334f6b47145f6d6a7`；推送 `131ec98..df0e33c`；ahead/behind `0 0`；远端feature指向df0e33c，main/develop仍指向9c9cd3c |
 | 退出码 | 0 |
 | 结论 | PASS：证明批准同步主提交已推送到授权feature分支且未推进main/develop；不证明PR已创建、Review或合并 |
+
+## TE-20261126-01：开始前Git状态
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 09:42:13 +08:00 |
+| 分支/HEAD | `feature/collaboration-prep` / `08ff87f1fbb7b511628da5ec22ca26ec873ae6c6` |
+| 环境 | Windows Git Bash；工作目录 `D:/Will/SYSU/数据库系统原理/大作业` |
+| 命令 | `git branch --show-current`；`git rev-parse HEAD`；`git status --short --branch`；`git remote -v`；`git log -6 --decorate --oneline --all --graph`；`git rev-list --left-right --count HEAD...origin/feature/collaboration-prep`；`git ls-remote --heads origin feature/collaboration-prep develop main` |
+| 实际输出摘要 | 分支为 `feature/collaboration-prep`；HEAD `08ff87f`；工作区无变更；ahead/behind `0 0`；远端feature `08ff87f`，`develop`/`main` 同为 `9c9cd3c`；最近提交为 `08ff87f`、`df0e33c`、`131ec98`、`566e53b`、`0586c32`、`2882736` |
+| 退出码 | 0（各命令） |
+| 结论 | PASS：仅证明开始时分支正确、跟踪远端无分歧、工作区干净；不证明PR或Review状态 |
+
+## TE-20261126-02：PR、Review、协作者与分支保护核查
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 09:43–09:45 +08:00 |
+| 分支/HEAD | `feature/collaboration-prep` / `08ff87f` |
+| 命令 | `gh auth status`；`gh pr list --state all`；`gh pr view 1 --json <metadata>`；`gh pr view 1 --json reviews,reviewRequests,reviewDecision`；`gh api repos/kamiweiwei12/-/pulls/1/reviews`；`gh api repos/kamiweiwei12/-/issues/1/timeline`；`gh api repos/kamiweiwei12/-/collaborators`；`gh api repos/kamiweiwei12/-/invitations`；`gh api repos/kamiweiwei12/-/branches`；`gh pr checks 1` |
+| 实际输出摘要 | 登录账号 `kamiweiwei12`，scope `gist,read:org,repo`。PR #1 `OPEN`，作者 `kamiweiwei12`，创建于 `2026-11-25T08:47:47Z`，原 `baseRefName=main`，`headRefOid=08ff87f`，28文件+985/−61，`body=""`，`isDraft=false`，`mergeable=UNKNOWN`。`reviews=[]`、`reviewRequests=[]`、`reviewDecision=""`；`pulls/1/reviews` 返回 `[]`；timeline 仅8条 `committed`，无 `review_requested`/`reviewed`/`commented`。协作者：`kamiweiwei12`(admin)、`Janovo2117`(write)；`invitations=[]`。三分支 `protected:false`。`gh pr checks` 输出 `no checks reported on the 'feature/collaboration-prep' branch` |
+| 退出码 | 0（各命令）；`gh pr checks` 为1（无检查项，非CI失败） |
+| 结论 | PASS：证明PR存在、原目标分支为`main`、无任何Review与CI；`Janovo2117` 具备write权限但无Review活动。**不证明**双人Review已完成——“Review完成”结论为 `UNVERIFIED` |
+
+## TE-20261126-03：纠正PR目标分支
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 09:46 +08:00 |
+| 命令 | `gh pr edit 1 --repo kamiweiwei12/- --base develop`；随后 `gh pr view 1 --json baseRefName,headRefName,state,headRefOid,baseRefOid,changedFiles,additions,deletions,reviews,reviewDecision` |
+| 实际输出摘要 | 命令输出PR链接，退出码0；复核结果 `baseRefName=develop`、`headRefName=feature/collaboration-prep`、`state=OPEN`、`baseRefOid=9c9cd3c`、`headRefOid=08ff87f`、28文件+985/−61、`reviews=[]`、`reviewDecision=""` |
+| 退出码 | 0 |
+| 结论 | PASS：证明PR目标分支已由`main`纠正为`develop`，未新增提交、未改写历史、未合并、未代替他人Review |
+
+## TE-20261126-04：文档静态检查
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 09:47 +08:00 |
+| 分支/HEAD | `feature/collaboration-prep` / `08ff87f`（未提交工作区） |
+| 命令 | `rg` 交叉检索 `occupancy_status`、`resource_type_id IS NULL`、`v1.0-rc`；Markdown内部链接检查；`git diff --check`；按文件分组 `git diff` |
+| 实际输出摘要 | `occupancy_status` 在DATABASE_CONTRACT出现1处、ENUMS无对应枚举，证实R5-05；`price_rule` 定义中 `resource_type_id FK NULL` 与 `stay_mode NULL` 并存且无组合CHECK，证实R5-04；`v1.0-rc` 状态在冻结记录/三份契约/README一致；内部链接通过；`git diff --check` 无空白错误 |
+| 退出码 | 0 |
+| 结论 | PASS：证明本轮文档编辑的链接与空白格式正确，且R5-04/R5-05为文档可见的真实缺口（尚待Reviewer判定，未擅自修改契约条文） |
+
+## TE-20261126-05：业务与运行时测试
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| Spring Boot/JUnit | NOT RUN | 仓库无后端工程，本轮未获授权初始化 |
+| React lint/build | NOT RUN | 仓库无前端工程，本轮未获授权初始化 |
+| PostgreSQL/Flyway | NOT RUN | 未获授权创建迁移或启动数据库 |
+| D-001规则匹配/冲突测试 | NOT RUN | 仅候选契约，无实现 |
+| D-002调度/时钟/并发测试 | NOT RUN | 无调度器实现 |
+| 并发/性能测试 | NOT RUN | 无可运行系统 |
