@@ -316,3 +316,39 @@
 | Spring Security / JWT | NOT RUN | S4 范围 |
 | 前端 lint/build | NOT RUN | 本次未触碰 `frontend/` |
 | JMeter / EXPLAIN 性能 | NOT RUN | 无真实业务数据 |
+
+## TE-20261126-18：springdoc 版本兼容性核查（拒绝不匹配版本）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:36–23:38 +08:00（Asia/Shanghai） |
+| 目的 | 为 INF-04 引入 OpenAPI 文档，先核实版本与 Boot 4.1.3 同代 |
+| 方法 | 读取 Maven Central 上各版本 `springdoc-openapi-<v>.pom` 的 `parent.version` |
+| 输出摘要 | `3.0.3 -> parent Boot 4.0.5`；`3.1.1 -> parent Boot 4.1.0`；`3.2.0 -> parent Boot 4.1.2`；`3.2.1 -> parent Boot 4.2.0` |
+| 结论 | PASS（核查）：`3.2.0` 与本项目 Boot 4.1.3 同代，采用；`3.2.1` 已跳到 Boot 4.2.0，与 ADR-012「不用 Boot 4.2」冲突，**拒绝采用** |
+| 文档冲突登记 | `docs/ARCHITECTURE.md` 版本矩阵原写「springdoc 3.2.x」，未区分 3.2.0/3.2.1 的 Boot 代际差异，已在本轮修正为 3.2.0 并注明升级前须复核父 POM |
+
+## TE-20261126-19：真实 HTTP 契约测试（INF-04）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:40–23:44 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `cf6a77b` + 本轮工作区改动 |
+| 环境 | Windows；JDK 21.0.12；Maven 3.9.16；`@SpringBootTest(webEnvironment=RANDOM_PORT)` 真实启动内嵌服务器；Jackson 3（`tools.jackson`） |
+| 命令 | `mvn -B -Pdb test`（含 `WebContractIT`） |
+| 首次失败（保留） | `No qualifying bean of type 'org.springframework.web.client.RestClient$Builder'` —— Boot 4 不再自动注册该 Builder，5 个用例全部 error，退出码 1 |
+| 修复 | 改用 `RestClient.create(baseUrl)`；JSON 解析由 `com.fasterxml.jackson` 切换为 Boot 4 的 `tools.jackson.databind.json.JsonMapper` |
+| 复测输出摘要 | `WebContractIT`：`Tests run: 5, Failures: 0, Errors: 0`；全量 `Tests run: 33, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 覆盖内容 | ① `/api/v1/health` 返回契约 §1 成功信封（`success/data/traceId/timestamp`，timestamp 匹配 `+08:00`）；② 每次请求 traceId 唯一；③ 未知路径返回 404 且 `error.code=RESOURCE_NOT_FOUND`、`fieldErrors` 为数组、`details` 为对象；④ 错误响应体不泄漏 `java.`/`org.springframework`/`edu.sysu`/`Exception`/`.java`/`SQL`；⑤ `/v3/api-docs` 返回 OpenAPI 3 文档且包含 `/api/v1/health` |
+| 退出码 | 0（`-Pdb` 与默认构建均为 0） |
+| 结论 | PASS：统一响应/异常/健康/OpenAPI 在真实 HTTP 线上格式与契约一致；安全要求「不泄漏内部细节」有可执行证据 |
+| 验证边界 | 仅覆盖平台级接口；业务端点（认证/订单/库存）尚未实现，**NOT RUN** |
+
+## TE-20261126-20：本轮未运行
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| 业务端点 HTTP 测试 | NOT RUN | 认证/订单/库存接口未实现（S4/S5） |
+| Spring Security / JWT | NOT RUN | S4 范围 |
+| CORS 策略验证 | NOT RUN | 需前端源配置，S5 联调时验证 |
+| 前端 lint/build | NOT RUN | 未触碰 `frontend/` |

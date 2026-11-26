@@ -30,6 +30,8 @@
 - 新增 `identity/infrastructure/persistence` 下的 `AppUserMapper`（全 `#{}` 参数绑定）与 `AppUserRecord`，作为 MyBatis 链路的真实验证对象。
 - 新增 `scripts/test-db-init.ps1`，幂等创建与开发库隔离的测试库 `snowfield_test`。
 - 新增 15 个真实 PostgreSQL 集成测试：Flyway 空库迁移、唯一/检查/外键/复合主键约束反例、失败语句不残留、参数绑定不可注入。
+- 接入 `springdoc-openapi 3.2.0`（父 POM 为 Boot 4.1.2，与项目 4.1.3 同代），暴露 `/v3/api-docs` 与 Swagger UI。
+- 新增 `WebContractIT`：以 `RANDOM_PORT` 真实启动内嵌服务器，验证统一成功信封、错误信封、404→`RESOURCE_NOT_FOUND` 映射、错误响应不泄漏堆栈/SQL/内部包名、OpenAPI 文档可访问且含健康接口。
 
 ### Changed
 
@@ -50,10 +52,11 @@
 - 技术栈基线由 Spring Boot 3.4.5 迁移到 4.1.3（Boot 3.4/3.5 已 EOL；mybatis-spring-boot-starter 4.1.0 官方对应 Boot 4.1，待 S3 接入验证）。
 - `docs/ARCHITECTURE.md` 追加 ADR-006~ADR-012 并重构模块/依赖/安全/时间/测试章节，保留 ADR-001~005 原文。
 - 本地开发数据库端口由 `5432` 改为 `5433`：本机原生 PostgreSQL 18 服务占用 5432，会导致 JDBC 连到本机实例而非容器；`.env.example` 与 `application.yml` 同步。
+- `docs/ARCHITECTURE.md` 版本矩阵中 springdoc 由「3.2.x / S5 引入（暂缓）」写实为「3.2.0 / S2 已引入」：实测 3.2.1 父 POM 已为 Boot 4.2.0，与 ADR-012 冲突。
 
 ### Known limitations
 
 - React 前端工程尚未创建；正式业务迁移只完成身份与权限三张表（`V1__baseline.sql`），营地/资源/价格/订单/库存待 S3。
-- 后端 S2 已验证：MyBatis 4.1.0 + Spring Boot 4.1.3 + PostgreSQL 16 + Flyway 12.4.0 在 Java 21 下真实可用，`mvn -B -Pdb test` 28 个测试全绿（TE-20261126-16）；Spring Security/JWT 仍未接入（S4）。
+- 后端 S2 已验证：MyBatis 4.1.0 + Spring Boot 4.1.3 + PostgreSQL 16 + Flyway 12.4.0 在 Java 21 下真实可用，`mvn -B -Pdb test` 33 个测试全绿（TE-20261126-19）；统一响应/异常/健康/OpenAPI 已在真实 HTTP 服务上验证。Spring Security/JWT 仍未接入（S4）。
 - 集成测试需要真实 PostgreSQL：先 `docker compose up -d db` 与 `scripts/test-db-init.ps1`；默认 `mvn test` 不连数据库，不得作为数据库证据。
 - 尚无可运行业务，因此没有业务闭环、并发或性能测试结果。

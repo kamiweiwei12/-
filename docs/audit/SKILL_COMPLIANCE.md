@@ -74,3 +74,14 @@
 | contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：本轮未修改 `DATABASE_CONTRACT.md`/`API_CONTRACT.md`/`ENUMS.md` 条文 | 记录不适用原因：`V1__baseline.sql` 是既有契约「身份与权限」节的落地实现，未新增或变更契约语义；D-005 等仍待 PR #2 评审 | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261126-06
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：本轮为实质性后端开发 | 完整读取；启动检查（分支 `feature/database-core`、HEAD `cf6a77b`、工作树干净、容器 healthy）；任务分类 `FEAT`+`TEST`；风险判断：不改公共契约条文，故不触发队友 Review；按 §13 闭环并同步六类文档 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：本轮产生提交 | 完整读取；确认授权分支与范围；只暂存明确文件；提交前 `git diff --check`；**未推送、未建 PR、未合并** | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：本轮执行真实构建与 HTTP 测试 | 完整读取；首次 `RestClient.Builder` 失败保留为 TE-19 并追加复测；记录真实退出码 0；未运行项 TE-20 标 NOT RUN | APPLIED |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 边界适用：未改契约条文，但新增针对 `API_CONTRACT.md` §1/§4 的验证测试 | 仅读取 `API_CONTRACT.md` 作为断言依据；未修改 `DATABASE_CONTRACT.md`/`API_CONTRACT.md`/`ENUMS.md` 任何条文；`ARCHITECTURE.md` 版本矩阵修正属事实同步 | NOT APPLICABLE（契约条文无变更） |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。

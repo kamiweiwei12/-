@@ -275,3 +275,22 @@ git diff --check
 - 项目 PostgreSQL 容器 `snowfield-db`（`postgres:16-alpine`）映射 `5433->5432`，命名卷 `snowfield_pgdata`。
 - 数据库账号 `snowfield`，密码取 `.env.example` 占位值；开发库 `snowfield`、测试库 `snowfield_test`。
 - 集成测试必须用 `-Pdb`；默认 `./mvnw test` 不连库。
+
+## OP-20261126-06：INF-04 统一响应/异常/健康/OpenAPI 的真实 HTTP 验证
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:33–23:50 +08:00（Asia/Shanghai） |
+| 任务 | 执行 INF-04：让统一响应、全局异常、健康检查与 OpenAPI 文档在**真实启动的 HTTP 服务**上得到验证 |
+| 分支 | `feature/database-core`，开始 HEAD `cf6a77b`，工作区干净 |
+| 用户授权 | 用户指示「可以，先做吧」，按上一轮建议执行不依赖 PR #2 的 INF-04；未授权推送、未要求催队友 Review，故均未执行 |
+| 修改文件 | 修改 `backend/pom.xml`（新增 springdoc 3.2.0）、`docs/ARCHITECTURE.md`（版本矩阵修正）；新增 `backend/src/test/java/edu/sysu/snowfield/support/WebContractIT.java`；审计与日志文件 |
+| 操作 | 核查 springdoc 各版本父 POM 的 Boot 代际（TE-18）；锁定 3.2.0 并真实解析；编写 `RANDOM_PORT` 真实启动的 HTTP 契约测试；首次因 Boot 4 不提供 `RestClient.Builder` 失败，改用 `RestClient.create` 与 Jackson 3 后全绿（TE-19） |
+| Skill | `project-governance`、`git-pr`、`test-evidence` 应用；`contract-change` **边界适用**：未修改 `API_CONTRACT.md` 任何条文，仅新增对该契约的测试；`ARCHITECTURE.md` 版本矩阵修正属设计文档同步，详见下 |
+| 测试 | `mvn -B -Pdb test` → 33 测试全绿，退出码 0；`mvn -B test` → 14 测试全绿，退出码 0；首次失败保留为 TE-20261126-19 |
+| 结果 | INF-04 平台层验收达成：成功信封、错误信封、404 映射、不泄漏内部细节、OpenAPI 文档均经真实 HTTP 验证；未推送、未开 PR |
+| 风险 | ① springdoc 3.2.1 会引入 Boot 4.2，ADR-012 禁止，已在 pom 注释与版本矩阵中锁定 3.2.0 及复核要求；② 业务端点测试仍 NOT RUN，待 S4/S5 |
+
+### 关于 `docs/ARCHITECTURE.md` 的修改说明
+
+原版本矩阵写「springdoc-openapi | 3.2.x | Boot 4.x 配 3.x | S5 引入（暂缓）」。实测 3.2.1 的父 POM 为 Boot 4.2.0，与 ADR-012 冲突。本轮仅把该行的版本写实为 `3.2.0` 并注明「升级前须复核父 POM 的 Boot 版本」、状态改为「S2 已引入（3.2.0）」。这是**事实修正**，未改变任何架构决策或契约条文，不构成需队友评审的公共契约变更。
