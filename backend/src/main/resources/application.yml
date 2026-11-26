@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: snowfield-backend
+
+server:
+  port: 8080
+  error:
+    include-stacktrace: never
+    include-message: never
+
+logging:
+  level:
+    root: INFO
+    edu.sysu.snowfield: INFO
