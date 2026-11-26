@@ -34,3 +34,12 @@
 | skill-creator | 未读取 | 不适用：本轮未创建或修改Skill | 记录不适用原因，无执行步骤 | NOT APPLICABLE |
 
 本记录仅证明列出的文件读取与项目内命令执行，不构成独立审计，也不代表 `Janovo2117` 已完成PR Review。
+
+## SC-20261126-02
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 适用：修改DB/API/ENUM契约与设计文档 | 完整读取；**首次按改写后的8项消费者清单逐项执行**（DATABASE_CONTRACT/API_CONTRACT/ENUMS/BUSINESS_FLOWS/DATABASE_DESIGN/CONTRACT_FREEZE/REQUIREMENTS/TEAM_TASK_BOARD），逐项结论记入 OP-20261126-02；为两项无批准证据的歧义登记 D-003/D-004 并取得负责人批准；未升级版本状态 | APPLIED；证据见TE-20261126-07 |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：提交并推送 feature 分支 | 完整读取；确认授权分支、HEAD、远端无分歧；只暂存明确文件；未合并、未代Review、未改分支保护 | APPLIED；证据见TE-20261126-10 |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：本轮执行术语检索、Skill校验与diff检查 | 完整读取；未预填PASS；Skill校验首次因解释器缺PyYAML返回退出码1，如实保留并按 test-evidence 规则以新条目追加复测；运行时测试记NOT RUN | APPLIED_WITH_RETRY；证据见TE-20261126-08/09 |
+| skill-creator | 未读取 | 不适用：本轮只改写既有 Skill 的步骤文本，未创建新 Skill | 记录不适用原因；仍用其 `quick_validate.py` 做结构校验 | NOT APPLICABLE |

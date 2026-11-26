@@ -123,10 +123,10 @@ EXCLUDE USING gist (
   resource_unit_id WITH =,
   stay_period WITH &&
 )
-WHERE (occupancy_status IN ('PENDING_PAYMENT','CONFIRMED','IN_USE'));
+WHERE (occupancy_status IN ('HELD','CONFIRMED','IN_USE'));
 ```
 
-需要 `btree_gist`。订单状态和占用状态不能靠两个任意更新入口维护；业务过程在同一事务同步，触发器仅记录历史/阻止非法不变量。
+该排斥约束需要 `btree_gist` 扩展。`occupancy_status` 取值域为公共 `OccupancyStatus` 枚举（`HELD/CONFIRMED/IN_USE/RELEASED`），以 `varchar + CHECK` 落库，**不复用 `OrderItemStatus`**：占用只表达是否仍占用时间区间，不表达履约进度。`HELD` 对应订单 `PENDING_PAYMENT` 的待支付占用；`RELEASED` 为终态，必须从排斥谓词中排除，否则已取消或过期的订单会永久阻塞同一资源。订单状态与占用状态不得由两个任意入口各自维护，须在同一业务事务中同步，触发器仅记录历史或阻止非法不变量。
 
 同一创建请求不得重复出现同一个 `resource_unit_id`。多间住宿逐行插入，任一排斥约束冲突都会回滚整个订单。
 
@@ -142,10 +142,21 @@ lift_slot(lift_slot_id PK, lift_id FK, start_at, end_at, capacity, reserved_quan
           UQ(lift_id, start_at), CHECK reserved between 0 and capacity)
 lift_booking(lift_booking_id PK, order_item_id UQ/FK, lift_slot_id FK, quantity)
 verification_token(token_id PK, order_item_id FK, token_hash UQ, status, valid_from, valid_until)
-verification_event(event_id PK, token_id FK, lift_slot_id FK NULL, result, verified_at,
+verification_event(event_id PK, token_id FK, lift_slot_id FK NULL,
+                   result CHECK VerificationResult, verified_at,
                    operator_id FK, idempotency_key, request_fingerprint,
                    UQ(operator_id, idempotency_key))
 ```
+
+`result` 取值域为公共 `VerificationResult` 枚举（`ACCEPTED/REJECTED`）。除操作级幂等键 `UQ(operator_id, idempotency_key)` 外，“同一令牌至多一次成功核销”必须由数据库再兜底，不能只依赖服务层行锁与状态判断：
+
+```sql
+CREATE UNIQUE INDEX uq_verification_event_accepted_token
+  ON verification_event (token_id)
+  WHERE result = 'ACCEPTED';
+```
+
+该部分唯一索引对不同管理员、不同幂等键的并发核销同样生效；`REJECTED` 事件不受限制，可多次记录用于审计。业务侧仍须先锁令牌行、校验有效期与状态，再把状态改为 `USED` 并写成功事件，三步在同一事务内完成。
 
 容量事务锁定 `ski_session`/`lift_slot FOR UPDATE`，检查后原子递增。取消按业务占用记录精确递减并写流水/历史。
 

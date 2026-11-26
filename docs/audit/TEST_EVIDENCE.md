@@ -190,3 +190,32 @@
 | 实际输出摘要 | cached diff check退出码0；创建提交 `16e194e9daa1e78d45baa676518f0b0666a2fc45`（6文件，+134/−1）；推送 `08ff87f..16e194e`；ahead/behind `0 0`；远端feature为 `16e194e`，`develop`/`main` 仍为 `9c9cd3c` |
 | 退出码 | 0（各命令） |
 | 结论 | PASS：证明审计记录与目标分支纠正已推送到授权feature分支，且未推进main/develop；不证明PR已Review或合并 |
+
+## TE-20261126-07：契约术语交叉检索与链接检查
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 10:20 +08:00 |
+| 分支/HEAD | `feature/collaboration-prep` / `f3612db`（未提交工作区） |
+| 命令 | `grep -rn "idempotency_key" docs/`；`grep -n "Occupan\|occupan" docs/ENUMS.md`；`grep -n "PENDING_PAYMENT" docs/DATABASE_CONTRACT.md`；Python 脚本检查 Markdown 内部链接；`git diff --check` |
+| 实际输出摘要 | `idempotency_key` 命中 4 个文件：DATABASE_CONTRACT×9、DATABASE_DESIGN×3（均为复合候选码）、DECISION_LOG×1、ISSUES×1，无“全局唯一”表述残留；`ENUMS.md` 第20行出现 `OccupancyStatus`、第54行起三条说明；`DATABASE_CONTRACT` 中 `PENDING_PAYMENT` 仅剩第129行解释性表述，排斥谓词已为 `HELD`；链接检查输出 `broken: none`；`git diff --check` 无空白错误 |
+| 退出码 | 0（各命令）；链接脚本 0 |
+| 结论 | PASS：证明6处契约编辑的术语、链接与空白格式一致；不证明运行时DDL正确性（无数据库，NOT RUN） |
+
+## TE-20261126-08：项目 Skill 结构校验（含一次失败）
+
+| 尝试 | 命令/环境 | 实际输出摘要 | 退出码 | 结论 |
+|---|---|---|---|---|
+| 1 | `PYTHONUTF8=1 py quick_validate.py .agents/skills/contract-change`（`py` = Python 3.14.3） | `ModuleNotFoundError: No module named 'yaml'` | 1（三个Skill均同） | FAIL：解释器缺少 PyYAML，未执行到结构校验 |
+| 2 | `py -m pip install pyyaml` | 提示 `Requirement already satisfied ... pythoncore-3.14-64`，说明存在另一个 3.14 安装 | 0 | 仅诊断，非校验结果 |
+| 3 | 改用 `C:/Users/willz/AppData/Local/Python/pythoncore-3.14-64/python.exe` 执行同一脚本 | `contract-change`、`git-pr`、`test-evidence` 均输出 `Skill is valid!` | 0（各） | PASS：仅证明frontmatter、命名与脚手架结构通过官方快速校验，不证明规则设计正确 |
+
+## TE-20261126-09：业务与运行时测试
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| PostgreSQL 排斥约束 DDL 验证 | NOT RUN | 未获授权创建 Flyway 或启动数据库 |
+| 核销并发双写（部分唯一索引） | NOT RUN | 无实现，本轮仅改候选契约 |
+| 占用状态流转测试 | NOT RUN | 无实现 |
+| Spring Boot/Java 编译与 JUnit | NOT RUN | 仓库无后端工程 |
+| React lint/build | NOT RUN | 仓库无前端工程 |

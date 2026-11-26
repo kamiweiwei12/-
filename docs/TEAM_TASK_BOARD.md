@@ -5,10 +5,11 @@
 | ID | 任务 | 优先级 | 依赖 | 推荐角色 | 当前负责人 | 状态 | 验收标准 |
 |---|---|---|---|---|---|---|---|
 | GOV-01 | 第一阶段需求/架构/ER/契约草案 | P0 | 无 | 共同 | UNASSIGNED | DONE | 文档、参考研究和两次基线提交存在 |
-| GOV-02 | GitHub接入main/develop | P0 | GOV-01 | 共同 | UNASSIGNED | DONE | 本地分支跟踪远端且提交SHA一致 |
+| GOV-02 | GitHub远端接入与main/develop发布 | P0 | GOV-01 | 共同 | UNASSIGNED | DONE | 本地分支跟踪远端且提交SHA一致 |
 | GOV-03 | 确认18项决策 | P0 | GOV-01 | 共同 | 朱承威/袁顺熙 | DONE | 用户集中确认，记录选择和理由 |
 | GOV-04 | 冻结DB/API/ENUM v1 | P0 | GOV-03 | 共同 | 朱承威/袁顺熙 | IN_REVIEW | 当前仅v1.0-rc；D-001/D-002已批准，待 `Janovo2117` 正式批准PR后才可正式冻结 |
 | GOV-05 | R-3/R-4契约与审计整改 | P0 | GOV-03 | 共同 | UNASSIGNED | IN_REVIEW | 八项缺口有处理记录、六类审计文件和三个项目Skill，等待人工审查 |
+| GOV-06 | 双人协作链路打通 | P0 | GOV-04 | 共同 | UNASSIGNED | BLOCKED | 第二人具备write权限后，至少产生1次真实提交和1次PR Review；提交作者集合中出现第二个身份 |
 | INF-01 | 初始化Spring Boot/Maven | P0 | GOV-04 | A | UNASSIGNED | TODO | Java21构建和基础JUnit通过 |
 | INF-02 | PostgreSQL Docker Compose | P0 | GOV-04 | A | UNASSIGNED | TODO | 健康检查通过，数据卷/环境变量说明完整 |
 | INF-03 | MyBatis/Flyway连接 | P0 | INF-01, INF-02 | A | UNASSIGNED | TODO | 空库迁移成功，禁用自动DDL |

@@ -82,7 +82,7 @@ PackageComponentSelection
   equipmentModelId?:string
 ```
 
-`LodgingSelection` 每项指定一个不同的具体 `resourceUnitId`、住宿模式、起止时刻和人数，因此一次订单可预订多间房。`PackageComponentSelection` 是按 `itemType` 判别的结构，只允许对应目标字段非空；同一 `packageComponentId` 可出现多行以选择多个具体资源，其数量合计必须等于目录组件要求。住宿行 `quantity` 固定为1；装备的具体ASSET由服务端分配，客户端只选择型号。套餐和单选数组可同时非空，独立数组只表达套餐之外的单选项。一个订单内全部项目必须属于同一营地。
+`LodgingSelection` 每项指定一个不同的具体 `resourceUnitId`、住宿模式、起止时刻和人数，因此一次订单可预订多间房。`PackageComponentSelection` 是按 `itemType` 判别的结构，只允许对应目标字段非空；同一 `packageComponentId` 可出现多行以选择多个具体资源，其数量合计必须等于目录组件要求。`LodgingSelection` **不提供 `quantity` 字段**，每一行固定生成一个数量为1的订单项，房间数量由数组元素个数表达；装备的具体ASSET由服务端分配，客户端只选择型号。套餐和单选数组可同时非空，独立数组只表达套餐之外的单选项。一个订单内全部项目必须属于同一营地。
 
 系统不使用 `quoteToken`。创建订单必须重算全部价格和库存，`expectedTotal` 只用于发现用户看到的报价是否变化，不能覆盖服务端金额。若不同，返回409 `PRICE_CHANGED`，`error.details`包含新的报价，且不创建订单。
 

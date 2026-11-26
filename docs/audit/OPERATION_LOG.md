@@ -161,3 +161,52 @@ git diff --stat 9c9cd3c..HEAD
 - 推送：`git push origin feature/collaboration-prep`，远端从 `08ff87f` 前进到 `16e194e`，退出码0。
 - 推送后核对：ahead/behind 为 `0 0`；远端feature为 `16e194e9daa1e78d45baa676518f0b0666a2fc45`；`main`、`develop` 均保持 `9c9cd3c8bbc7391da9638140a47bd6d92175ef57`；PR #1 `baseRefName=develop`、`headRefOid` 随推送更新。
 - 本段证据回填以独立闭合提交保存；该闭合提交SHA以Git历史为准，避免文件自引用自身提交对象。
+
+## OP-20261126-02：按第二次审计修复契约一致性缺口
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 10:19:35–10:30 +08:00（Asia/Shanghai）；提交与推送时间见下方追加段 |
+| 任务 | 处理第二次独立审计的 P1-1、P1-2、P2-1、P2-2、P2-3、P2-4、P2-5 与 G-3；按 D-003/D-004 落地占用枚举与核销唯一约束 |
+| 分支 | `feature/collaboration-prep`，开始HEAD `f3612dbd9eb8cffc12dbbf863296a5d55998b563`；开始时工作区干净、ahead/behind `0 0` |
+| 修改文件 | `docs/design/DATABASE_DESIGN.md`、`docs/DATABASE_CONTRACT.md`、`docs/API_CONTRACT.md`、`docs/ENUMS.md`、`docs/CONTRACT_FREEZE.md`、`docs/TEAM_TASK_BOARD.md`、`docs/audit/{ISSUES,DECISION_LOG,OPERATION_LOG,TEST_EVIDENCE,SKILL_COMPLIANCE}.md`、`.agents/skills/contract-change/SKILL.md`、`CHANGELOG.md`、新增 `.gitattributes` |
+| 操作 | 读取AGENTS与三个Skill；逐项核对审计报告行号；按D-003/D-004改契约；补ER与码摘要；扩写Skill同步清单；追加审计条目 |
+| Skill | `contract-change`（首次按新8项清单执行，逐项结论见下）、`git-pr`、`test-evidence`；详见 `SC-20261126-02` |
+| 测试 | 术语交叉检索、Markdown内部链接、Skill结构校验（含一次解释器缺 PyYAML 的失败）、`git diff --check`；业务/数据库/前端/并发测试NOT RUN |
+| 结果 | 6项审计问题修复并登记 R5-06..R5-10；D-003/D-004 落为 `APPROVED_IN_RC`；契约仍为 `v1.0-rc`；未合并、未Review、未改分支保护 |
+| Commit | 本段内容作为单个提交进入 `feature/collaboration-prep`；SHA 以 `git log -1` 为准，不在文件内自引用 |
+| 风险 | R5-04（`price_rule` 类型与模式同时为空的语义）仍需业务裁定，本轮未擅自改；运行时测试全部NOT RUN；回滚为 revert 本轮提交 |
+
+### contract-change 8项消费者清单执行结果
+
+| 消费者 | 结论 |
+|---|---|
+| `docs/DATABASE_CONTRACT.md` | 已改：排斥谓词改 `HELD`；核销补 `result CHECK` 与部分唯一索引 |
+| `docs/API_CONTRACT.md` | 已改：住宿 `quantity` 歧义表述 |
+| `docs/ENUMS.md` | 已改：新增 `OccupancyStatus`、`VerificationResult` 及转换说明 |
+| `docs/design/BUSINESS_FLOWS.md` | 无需修改：核销流程第6节已描述“锁令牌→校验→写事件→改USED”，与新增约束不冲突 |
+| `docs/design/DATABASE_DESIGN.md` | 已改：候选码、ER 关系、基数说明 |
+| `docs/CONTRACT_FREEZE.md` | 已改：追加 v1.0-rc 修订2 版本记录 |
+| `docs/REQUIREMENTS.md` | 无需修改：FR-E 已要求“核销码只可成功使用一次”，新约束只是把它落到数据库 |
+| `docs/TEAM_TASK_BOARD.md` | 已改：GOV-02 改名，新增 GOV-06 |
+
+### 已实际执行的关键命令
+
+```text
+git branch --show-current / git rev-parse HEAD / git status --short --branch
+grep -rn "idempotency_key" docs/
+grep -n "Occupan|occupan" docs/ENUMS.md
+grep -n "PENDING_PAYMENT" docs/DATABASE_CONTRACT.md
+py -m pip install pyyaml            # 发现 pythoncore-3.14-64 已装，py 3.14.3 shim 缺该模块
+PYTHONUTF8=1 <pythoncore-3.14-64>/python.exe quick_validate.py .agents/skills/<skill>
+Markdown 内部链接检查（Python 脚本）
+git diff --check
+git diff -- <contract files>
+```
+
+上述命令在 Git Bash、工作目录 `D:/Will/SYSU/数据库系统原理/大作业` 执行；输出摘要与退出码见 TE-20261126-07/08。
+
+### 提交与推送结果
+
+- 本段全部改动作为**单个提交**进入 `feature/collaboration-prep`，不再拆分为“内容提交+证据回填提交”，以避免重复 P3-1 指出的“一个可审查单元被拆成多个提交”。
+- 提交 SHA 与推送状态不写入文件（提交对象无法在自身内容中自引用），以 `git log -1` 和本轮任务报告为准。

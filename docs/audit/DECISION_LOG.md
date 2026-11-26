@@ -27,6 +27,28 @@
 - 落地约束：后端按可配置周期幂等扫描并写入OVERDUE；逾期不释放库存，实际归还才释放。需要可控时钟、重复扫描和并发扫描测试。
 - 审批边界：已进入v1.0-rc，但尚无代码或测试，仍须正式PR Review；当前不得实现执行器。
 
+### D-003：住宿占用状态的枚举归属
+
+- 状态：`APPROVED_IN_RC`，2026-11-26（Asia/Shanghai）。
+- 最终决定：方案A，新建独立 `OccupancyStatus` 枚举（`HELD/CONFIRMED/IN_USE/RELEASED`），不复用 `OrderItemStatus`。
+- 批准证据：项目负责人于 2026-11-26 10:19 +08:00 回复“全按推荐”，对应执行计划的决策1推荐项A。
+- 原因：第二次审计P2-3指出 `lodging_reservation.occupancy_status` 的取值不在任何公共枚举中，`ENUMS.md` 规定枚举必须在DB/Java/OpenAPI/TypeScript完全一致，DDL无从生成CHECK。
+- 方案A：独立枚举，占用只表达“是否仍占用资源时间区间”，不混入 `FULFILLED/EXPIRED` 等履约语义；待支付占用统一为 `HELD`，补 `RELEASED` 终态。
+- 方案B（未采纳）：复用 `OrderItemStatus`，改动更小但混淆两套语义。
+- 影响：`DATABASE_CONTRACT` 排斥谓词由 `PENDING_PAYMENT` 改为 `HELD`；后续DDL与DTO按新枚举生成。
+- 审批边界：已进入v1.0-rc，仍须 `Janovo2117` 在PR #1中Review；当前不得创建Flyway。
+
+### D-004：核销“同一令牌至多一次成功”的数据库约束
+
+- 状态：`APPROVED_IN_RC`，2026-11-26（Asia/Shanghai）。
+- 最终决定：方案A，增加部分唯一索引 `UNIQUE(token_id) WHERE result='ACCEPTED'`，并定义 `VerificationResult` 枚举（`ACCEPTED/REJECTED`）。
+- 批准证据：同D-003，对应执行计划的决策2推荐项A。
+- 原因：第二次审计P2-1指出核销仅有操作级幂等键 `UQ(operator_id, idempotency_key)`，不同管理员用不同键并发核销同一令牌时，最终防线仍落在应用层行锁，与“数据库负责不可绕过的完整性”冲突。
+- 方案A：数据库层强制单次成功；`REJECTED` 事件不受限，可多次记录用于审计。
+- 方案B（未采纳）：仅服务层行锁，无数据库约束。
+- 影响：`verification_event` DDL、并发核销测试用例；测试当前`NOT RUN`。
+- 审批边界：已进入v1.0-rc，仍须PR Review。
+
 ## 已有确认的引用
 
 18项业务确认的追加式证据见 `../PHASE2_CONFIRMATIONS.md`。本文件不重复改写历史提案。

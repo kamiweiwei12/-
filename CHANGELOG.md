@@ -17,6 +17,9 @@
 - 建立操作、测试证据、Skill合规、决策和问题审计体系。
 - 建立契约变更、Git PR和测试证据三个项目级Skill。
 - 登记PR核查发现：PR #1目标分支错误（R5-01）、审计记录与PR创建时间不一致（R5-02）、三分支无保护（R5-03）、价格规则全空组合语义缺失（R5-04）、占用状态枚举缺失（R5-05）。
+- 新增 `OccupancyStatus`（`HELD/CONFIRMED/IN_USE/RELEASED`）与 `VerificationResult`（`ACCEPTED/REJECTED`）两个公共枚举。
+- 新增 `.gitattributes`（`* text=auto eol=lf`），消除跨平台行尾警告；未对历史文件执行 renormalize。
+- 新增任务卡 GOV-06「双人协作链路打通」，并把 GOV-02 改名为「GitHub远端接入与main/develop发布」。
 
 ### Changed
 
@@ -29,6 +32,11 @@
 - 批准D-002方案A：由后端定时任务幂等标记逾期租赁，逾期不自动释放库存。
 - 将协作准备PR #1的目标分支由 `main` 纠正为 `develop`，符合AGENTS.md §6的集成路径。
 - 更正冻结记录中关于成员B协作权限与分支保护的陈述：`Janovo2117` 已具备write权限，但双人PR Review仍未发生。
+- 修复 `design/DATABASE_DESIGN.md` 与数据库契约的不一致：`payment.idempotency_key` 候选码改为 `(order_id, idempotency_key)`，补 `customer_order` 创建幂等键与两个核销关系的ER/码摘要。
+- 住宿排斥谓词改用 `HELD/CONFIRMED/IN_USE`，`occupancy_status` 明确使用 `OccupancyStatus`，`RELEASED` 不参与排斥（D-003）。
+- 核销新增部分唯一索引 `UNIQUE(token_id) WHERE result='ACCEPTED'`，把“同一令牌至多一次成功”下沉到数据库（D-004）。
+- 修正 `API_CONTRACT` 中住宿 `quantity` 的歧义表述：`LodgingSelection` 不提供 `quantity`，房间数量由数组长度表达。
+- `contract-change` Skill 的第5步由“四份事实源”改为8项显式消费者清单，防止ER文档漏同步。
 
 ### Known limitations
 

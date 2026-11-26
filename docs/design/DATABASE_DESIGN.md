@@ -32,6 +32,9 @@ erDiagram
     ORDER_ITEM ||--o{ PRICE_SNAPSHOT_LINE : explained_by
     CUSTOMER_ORDER ||--o{ PAYMENT : paid_by
     CUSTOMER_ORDER ||--o{ ORDER_STATUS_HISTORY : transitions
+    ORDER_ITEM ||--o{ VERIFICATION_TOKEN : issues
+    VERIFICATION_TOKEN ||--o{ VERIFICATION_EVENT : verified_by
+    APP_USER ||--o{ VERIFICATION_EVENT : operates
 ```
 
 ## 关系基数说明
@@ -43,6 +46,7 @@ erDiagram
 - 住宿资源与预订 1:N，但有效时间范围不得重叠。
 - 场次/时段与购买记录 1:N，数量和不得超过容量。
 - 装备型号与资产 1:N；租赁和具体资产 M:N，经分配表分解。
+- 订单项与核销令牌 1:N，令牌与核销事件 1:N；同一令牌至多存在一条成功核销事件，由部分唯一索引保证。
 
 ## 关系模式摘要
 
@@ -50,14 +54,16 @@ erDiagram
 
 - `APP_USER(user_id)`，候选码 `email`。
 - `RESOURCE_UNIT(resource_unit_id)`，候选码 `(resource_type_id, code)`。
-- `CUSTOMER_ORDER(order_id)`，候选码 `order_no`。
+- `CUSTOMER_ORDER(order_id)`，候选码 `order_no`、`(user_id, create_idempotency_key)`。
 - `ORDER_PACKAGE(order_package_id)`，外码 `order_id/package_offer_id`。
 - `ORDER_ITEM(order_item_id)`，外码 `order_id`。
 - `LODGING_RESERVATION(reservation_id)`，候选码 `order_item_id`。
 - `SKI_SESSION(ski_session_id)`，候选码 `(ski_product_id,start_at)`。
 - `LIFT_SLOT(lift_slot_id)`，候选码 `(lift_id,start_at)`。
 - `EQUIPMENT_ASSET(asset_id)`，候选码 `asset_code`。
-- `PAYMENT(payment_id)`，候选码 `payment_no`、`idempotency_key`。
+- `PAYMENT(payment_id)`，候选码 `payment_no`、`(order_id, idempotency_key)`。
+- `VERIFICATION_TOKEN(token_id)`，候选码 `token_hash`，外码 `order_item_id`。
+- `VERIFICATION_EVENT(event_id)`，候选码 `(operator_id, idempotency_key)`，外码 `token_id`、`operator_id`；`result='ACCEPTED'` 时 `token_id` 全局唯一（部分唯一索引）。
 
 ## 3NF验证
 
