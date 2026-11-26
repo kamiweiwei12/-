@@ -157,4 +157,7 @@ git diff --stat 9c9cd3c..HEAD
 
 ### 提交与推送结果
 
-- 本段创建时尚未提交，以下结果在证据回填提交中追加，不在此预填。
+- 主提交：`16e194e9daa1e78d45baa676518f0b0666a2fc45`，信息 `docs(audit): record PR inspection and correct target branch`，6个文件、134行新增、1行删除；提交命令退出码0。
+- 推送：`git push origin feature/collaboration-prep`，远端从 `08ff87f` 前进到 `16e194e`，退出码0。
+- 推送后核对：ahead/behind 为 `0 0`；远端feature为 `16e194e9daa1e78d45baa676518f0b0666a2fc45`；`main`、`develop` 均保持 `9c9cd3c8bbc7391da9638140a47bd6d92175ef57`；PR #1 `baseRefName=develop`、`headRefOid` 随推送更新。
+- 本段证据回填以独立闭合提交保存；该闭合提交SHA以Git历史为准，避免文件自引用自身提交对象。

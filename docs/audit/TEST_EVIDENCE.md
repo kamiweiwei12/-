@@ -180,3 +180,13 @@
 | D-001规则匹配/冲突测试 | NOT RUN | 仅候选契约，无实现 |
 | D-002调度/时钟/并发测试 | NOT RUN | 无调度器实现 |
 | 并发/性能测试 | NOT RUN | 无可运行系统 |
+
+## TE-20261126-06：提交与推送
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 09:49 +08:00 |
+| 命令 | `git add <6 files>`；`git diff --cached --check`；`git commit -m "docs(audit): record PR inspection and correct target branch"`；`git push origin feature/collaboration-prep`；`git rev-list --left-right --count HEAD...origin/feature/collaboration-prep`；`git ls-remote --heads origin feature/collaboration-prep develop main` |
+| 实际输出摘要 | cached diff check退出码0；创建提交 `16e194e9daa1e78d45baa676518f0b0666a2fc45`（6文件，+134/−1）；推送 `08ff87f..16e194e`；ahead/behind `0 0`；远端feature为 `16e194e`，`develop`/`main` 仍为 `9c9cd3c` |
+| 退出码 | 0（各命令） |
+| 结论 | PASS：证明审计记录与目标分支纠正已推送到授权feature分支，且未推进main/develop；不证明PR已Review或合并 |
