@@ -85,3 +85,14 @@
 | contract-change | `.agents/skills/contract-change/SKILL.md` | 边界适用：未改契约条文，但新增针对 `API_CONTRACT.md` §1/§4 的验证测试 | 仅读取 `API_CONTRACT.md` 作为断言依据；未修改 `DATABASE_CONTRACT.md`/`API_CONTRACT.md`/`ENUMS.md` 任何条文；`ARCHITECTURE.md` 版本矩阵修正属事实同步 | NOT APPLICABLE（契约条文无变更） |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-01
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：推送、PR、数据库迁移均属实质性工作 | 完整读取；启动检查（分支/HEAD/工作树/远端/PR）；任务分类 `GIT`+`DB`+`TEST`；风险评估：迁移基于未冻结契约，已登记风险；按 §13 闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：本轮推送并创建 PR | 完整读取；推送前 `git fetch` 核对 ahead/behind 与 `origin/develop` 未变；PR 正文含目标/范围/契约影响/测试证据/风险/回滚/未完成项；未合并、未改分支保护与权限 | APPLIED；PR #3 证据见 OP-20261127-01 |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：执行迁移与约束测试 | 完整读取；空库重建后全量执行；首次编译错误保留为 TE-20261127-02 失败记录；未覆盖项 TE-20261127-03 明确 NOT RUN；记录真实退出码 0 | APPLIED |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | **不适用**：V2/V3 是既有契约结构的 DDL 落地 | 逐条对照 `DATABASE_CONTRACT.md` §2 与 `ENUMS.md` 的枚举值编写约束，**未修改任何契约条文**；`R5-04` 未裁定的语义刻意不写死，避免事实上改动契约 | NOT APPLICABLE（契约条文无变更） |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。

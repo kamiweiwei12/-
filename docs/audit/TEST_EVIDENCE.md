@@ -352,3 +352,38 @@
 | Spring Security / JWT | NOT RUN | S4 范围 |
 | CORS 策略验证 | NOT RUN | 需前端源配置，S5 联调时验证 |
 | 前端 lint/build | NOT RUN | 未触碰 `frontend/` |
+
+## TE-20261127-01：DB-02/DB-03 迁移（V2/V3）在干净库全量执行
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 00:04–00:10 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `719e92e` + 本轮工作区改动 |
+| 环境 | Windows；JDK 21.0.12；Maven 3.9.16；`snowfield-db`（PostgreSQL 16.16, 5433）；测试库 `snowfield_test` **先 DROP 再 CREATE**，确保为空库 |
+| 命令 | `docker exec ... psql -c 'DROP DATABASE snowfield_test'` → `CREATE DATABASE`；`mvn -B -Pdb test` |
+| 输出摘要 | `Migrating schema "public" to version "1 - baseline"`、`"2 - campground and resource"`、`"3 - price rules and calendar"`；`Successfully applied 3 migrations to schema "public", now at version v3 (execution time 00:00.351s)`；合计 `Tests run: 54, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 退出码 | 0 |
+| 结论 | PASS：满足 AGENTS.md §4「迁移必须在干净数据库从 V1 全量成功执行」；V1→V2→V3 链式迁移无顺序依赖问题 |
+
+## TE-20261127-02：DB-02/DB-03 约束反例测试
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 00:06–00:09 +08:00（Asia/Shanghai） |
+| 命令 | `mvn -B -Pdb test -Dtest=ResourceAndPriceConstraintIT` |
+| 输出摘要 | `Tests run: 21, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 首次失败（保留） | `COMPILATION ERROR ... ResourceAndPriceConstraintIT.java:[247,16] 未报告的异常错误java.sql.SQLException` —— `holidayIsUniquePerCampgroundAndDate` 缺少 `throws SQLException`，退出码 1 |
+| 修复 | 为该测试方法补 `throws SQLException` |
+| 覆盖内容 | 营地：编码唯一、币种必须 CNY、时区必须 Asia/Shanghai；季节：`end<start` 被拒、同日边界合法；资源：`kind` 枚举、`base_capacity>0`、类型内编码唯一、`stay_mode` 枚举；开放规则：星期 1..7、`close_time>open_time`；维修：空区间被拒、合法区间通过；价格：`operation` 枚举、`value>=0`、`stay_mode` 枚举、**D-001 方案B 的 `resource_type_id=NULL` 允许**、`price_rule_weekday` 级联删除、节假日按营地+日期唯一 |
+| 退出码 | 0 |
+| 结论 | PASS：上述约束均由数据库真实拒绝/接受，证据来自反例而非代码阅读 |
+
+## TE-20261127-03：DB-02/DB-03 未覆盖范围
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| 住宿时间排斥约束（`EXCLUDE USING gist`） | NOT RUN | 依赖 `lodging_reservation`（订单域 V4），S3 尚未建表 |
+| 住宿并发预订/超卖 | NOT RUN | 同上 |
+| 价格规则冲突检测（`PRICE_RULE_CONFLICT`） | NOT RUN | 属应用层报价逻辑（BK-01），尚未实现 |
+| `R5-04` 双空语义裁定 | OPEN | 契约未裁定，迁移刻意不加 CHECK，测试仅固定当前行为 |
+| 开发库 `snowfield` 迁移 | NOT RUN | 刻意不迁移开发库，只在隔离测试库验证 |

@@ -30,6 +30,9 @@
 - 新增 `identity/infrastructure/persistence` 下的 `AppUserMapper`（全 `#{}` 参数绑定）与 `AppUserRecord`，作为 MyBatis 链路的真实验证对象。
 - 新增 `scripts/test-db-init.ps1`，幂等创建与开发库隔离的测试库 `snowfield_test`。
 - 新增 15 个真实 PostgreSQL 集成测试：Flyway 空库迁移、唯一/检查/外键/复合主键约束反例、失败语句不残留、参数绑定不可注入。
+- 新增 `V2__campground_and_resource.sql`：`campground`/`season`/`resource_type`/`resource_unit`/`resource_type_stay_mode`/`resource_open_rule`/`resource_maintenance` 七表，含 `btree_gist` 扩展、币种/时区/枚举/容量/时间窗/区间非空等约束。
+- 新增 `V3__price_rules_and_calendar.sql`：`holiday`/`price_rule`/`price_rule_weekday`/`price_rule_date` 四表，按 D-001 方案B 允许 `resource_type_id=NULL`，`stay_mode` 受枚举 CHECK；`R5-04` 双空语义未裁定，刻意不加 CHECK。
+- 新增 `ResourceAndPriceConstraintIT`：21 个约束反例/正例测试，覆盖营地、季节、资源、开放规则、维修区间、价格规则与节假日唯一性。
 - 接入 `springdoc-openapi 3.2.0`（父 POM 为 Boot 4.1.2，与项目 4.1.3 同代），暴露 `/v3/api-docs` 与 Swagger UI。
 - 新增 `WebContractIT`：以 `RANDOM_PORT` 真实启动内嵌服务器，验证统一成功信封、错误信封、404→`RESOURCE_NOT_FOUND` 映射、错误响应不泄漏堆栈/SQL/内部包名、OpenAPI 文档可访问且含健康接口。
 

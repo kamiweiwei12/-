@@ -17,8 +17,8 @@
 | INF-05 | 初始化React/Vite/TS/Ant Design | P0 | GOV-04 | B | UNASSIGNED | TODO | lint/build通过，基础页面可访问 |
 | INF-06 | 前端路由/API客户端/状态页 | P0 | INF-04, INF-05 | B | UNASSIGNED | TODO | 用户/管理路由及Loading/Empty/Error示例 |
 | DB-01 | V1基础扩展/用户/角色迁移 | P0 | INF-03 | A | 朱承威 | IN_REVIEW | V1 身份与权限三表迁移已落地，唯一/检查/外键反例测试通过（TE-20261126-16）；完整 DB-01 范围待补 |
-| DB-02 | 营地/资源/开放规则迁移 | P0 | DB-01 | A | UNASSIGNED | TODO | 关系和种子数据与契约一致 |
-| DB-03 | 价格规则/日历迁移 | P0 | GOV-04, DB-02 | A | UNASSIGNED | TODO | 冲突规则测试、价格查询测试通过 |
+| DB-02 | 营地/资源/开放规则迁移 | P0 | DB-01 | A | 朱承威 | IN_REVIEW | `V2__campground_and_resource.sql` 七表落地，干净库全量迁移成功；约束反例测试通过（TE-20261127-01/02） |
+| DB-03 | 价格规则/日历迁移 | P0 | GOV-04, DB-02 | A | 朱承威 | IN_REVIEW | `V3__price_rules_and_calendar.sql` 四表落地，D-001 方案B 已验证；**冲突规则测试待 BK-01**（应用层报价逻辑未实现），`R5-04` 未裁定 |
 | DB-04 | 统一订单/价格快照迁移 | P0 | DB-01, DB-03 | A | UNASSIGNED | TODO | 状态、金额、历史和幂等约束通过 |
 | BK-01 | 住宿可用性和报价 | P0 | DB-02, DB-03 | A | UNASSIGNED | TODO | 半开区间/维修/开放/价格用例通过 |
 | BK-02 | 创建、支付、取消住宿订单 | P0 | DB-04, BK-01 | A | UNASSIGNED | TODO | 单事务、幂等、释放和回滚测试通过 |

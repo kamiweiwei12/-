@@ -47,7 +47,10 @@ public abstract class AbstractPostgresIntegrationTest {
     protected void truncateBusinessTables() throws SQLException {
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
-            statement.execute("TRUNCATE TABLE user_role, app_user RESTART IDENTITY CASCADE");
+            statement.execute("""
+                    TRUNCATE TABLE user_role, app_user, season, resource_type, campground, holiday, price_rule
+                    RESTART IDENTITY CASCADE
+                    """);
         }
     }
 }
