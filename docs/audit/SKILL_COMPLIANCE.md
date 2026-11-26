@@ -43,3 +43,14 @@
 | git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：提交并推送 feature 分支 | 完整读取；确认授权分支、HEAD、远端无分歧；只暂存明确文件；未合并、未代Review、未改分支保护 | APPLIED；证据见TE-20261126-10 |
 | test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：本轮执行术语检索、Skill校验与diff检查 | 完整读取；未预填PASS；Skill校验首次因解释器缺PyYAML返回退出码1，如实保留并按 test-evidence 规则以新条目追加复测；运行时测试记NOT RUN | APPLIED_WITH_RETRY；证据见TE-20261126-08/09 |
 | skill-creator | 未读取 | 不适用：本轮只改写既有 Skill 的步骤文本，未创建新 Skill | 记录不适用原因；仍用其 `quick_validate.py` 做结构校验 | NOT APPLICABLE |
+
+## SC-20261126-03
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：本轮只修订 `docs/ARCHITECTURE.md`（设计文档，非 DB/API/ENUM 三份契约） | 读取并确认其适用边界；未修改任何契约条文，未触碰 8 项消费者清单 | NOT APPLICABLE |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：记录分支/HEAD/工作区，提交前检查 diff | 记录 `git branch/status/remote`；执行 `git diff --check`；未 reset、未强推、未改历史 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：S1 真实构建需记录命令/输出/退出码 | 记录 `./mvnw -B test` 首次失败与修复后通过的真实输出与退出码；业务/DB 测试记 NOT RUN | APPLIED |
+| skill-creator | 未读取 | 不适用：本轮未创建或修改 Skill | — | NOT APPLICABLE |
+
+本记录仅证明列出的文件读取与项目内命令执行，不构成独立审计。
