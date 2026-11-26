@@ -219,3 +219,34 @@
 | 占用状态流转测试 | NOT RUN | 无实现 |
 | Spring Boot/Java 编译与 JUnit | NOT RUN | 仓库无后端工程 |
 | React lint/build | NOT RUN | 仓库无前端工程 |
+
+## TE-20261126-11：合并、分支保护与仓库改名核验
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 20:48 +08:00 |
+| 分支/HEAD | `docs/contract-freeze-v1` 创建前，本地处于 `feature/collaboration-prep` / `01a8d34` |
+| 命令 | `git fetch origin --prune`；`gh pr view 1 --json state,mergedAt,mergeCommit,reviews,reviewDecision`；`gh api .../branches`；`gh api .../branches/develop/protection`；`git log -1 --format='%H %p %s' origin/develop`；`git diff --stat 01a8d34 origin/develop`；`docker info --format '{{.ServerVersion}}'` |
+| 实际输出摘要 | `fetch` 输出 `9c9cd3c..3404221 develop`。PR #1 `state=MERGED`、`mergedAt=2026-11-26T12:47:47Z`、`reviewDecision=APPROVED`，唯一 review 为 `Janovo2117` / `APPROVED` / `commit_id=01a8d34` / 正文 `good`。合并提交 `3404221` 双亲为 `9c9cd3c 01a8d34`。`git diff --stat 01a8d34 origin/develop` 无输出（树一致）。分支保护：`develop` `required_approving_review_count=1`、`enforce_admins=true`、`allow_force_pushes=false`；`main` `protected=true`；feature 分支 `false`。Docker `29.6.1` |
+| 退出码 | 0（各命令） |
+| 结论 | PASS：证明合并真实发生、内容无丢失、保护规则已生效。**不证明**该 Review 有实质深度——正文仅 `good`，未对 D-001 服务层完整性、D-002 调度语义、R5-04 表态 |
+
+## TE-20261126-12：冻结状态一致性与文档检查
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 20:56 +08:00 |
+| 分支/HEAD | `docs/contract-freeze-v1`（未提交工作区） |
+| 命令 | `grep -rn "FROZEN v1.0" --include="*.md" docs/ README.md`；`grep -rln "v1.0-rc" --include="*.md" . \| grep -v "docs/audit/"`；Markdown 内部链接脚本；`git diff --check` |
+| 实际输出摘要 | `FROZEN v1.0` 命中 9 处（四份契约、ER、需求、架构、范围、冻结记录、README）。`v1.0-rc` 残留 4 个文件：`CHANGELOG.md`（历史条目）、`CONTRACT_FREEZE.md`（版本记录）、`PHASE1_REVIEW.md`（历史说明+追加指针）、`PHASE2_CONFIRMATIONS.md`（历史确认表）——均为**有意保留的历史记录**。内部链接 `broken: none`；`git diff --check` 无空白错误 |
+| 退出码 | 0（各命令） |
+| 结论 | PASS：证明状态声明已一致切换，残留仅为追加式历史记录，未覆盖历史 |
+
+## TE-20261126-13：业务与运行时测试
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| PostgreSQL 空库迁移 | NOT RUN | 本分支不含工程与迁移 |
+| 排斥约束/部分唯一索引 DDL | NOT RUN | 同上 |
+| Spring Boot / JUnit | NOT RUN | 后端工程在 `feature/database-core` 分支中建立，不在本分支 |
+| React lint/build | NOT RUN | 无前端工程 |

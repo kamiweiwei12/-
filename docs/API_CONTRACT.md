@@ -1,6 +1,6 @@
 # REST API 公共契约
 
-状态：`CANDIDATE v1.0-rc`，等待另一成员真实 PR Review。基础路径 `/api/v1`，媒体类型 `application/json`。
+状态：`FROZEN v1.0`（2026-11-26）。基础路径 `/api/v1`，媒体类型 `application/json`。
 
 ## 1. 通用格式
 

@@ -43,3 +43,12 @@
 | git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：提交并推送 feature 分支 | 完整读取；确认授权分支、HEAD、远端无分歧；只暂存明确文件；未合并、未代Review、未改分支保护 | APPLIED；证据见TE-20261126-10 |
 | test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：本轮执行术语检索、Skill校验与diff检查 | 完整读取；未预填PASS；Skill校验首次因解释器缺PyYAML返回退出码1，如实保留并按 test-evidence 规则以新条目追加复测；运行时测试记NOT RUN | APPLIED_WITH_RETRY；证据见TE-20261126-08/09 |
 | skill-creator | 未读取 | 不适用：本轮只改写既有 Skill 的步骤文本，未创建新 Skill | 记录不适用原因；仍用其 `quick_validate.py` 做结构校验 | NOT APPLICABLE |
+
+## SC-20261126-03
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 适用：升级契约版本状态并新增 D-005 语义 | 完整读取；按8项清单逐项执行——DATABASE_CONTRACT（D-005）、API_CONTRACT（状态）、ENUMS（状态）、BUSINESS_FLOWS（无需改，D-005 不改变流程）、DATABASE_DESIGN（状态）、CONTRACT_FREEZE（冻结证据与版本记录）、REQUIREMENTS（状态）、TEAM_TASK_BOARD（GOV-04/05） | APPLIED；证据见TE-20261126-12 |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：新建分支、提交、推送、创建PR | 完整读取；从 `origin/develop` 派生 `docs/contract-freeze-v1`；只暂存明确文件；未合并、未代Review | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：记录合并与冻结核验 | 完整读取；记录真实命令、输出摘要与退出码；Review 深度不足如实标注；运行时测试NOT RUN | APPLIED |
+| skill-creator | 未读取 | 不适用：未创建或修改 Skill | 记录原因 | NOT APPLICABLE |

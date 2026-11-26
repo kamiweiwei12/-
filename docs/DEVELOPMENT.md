@@ -9,7 +9,7 @@
 ## 第2阶段状态（2026-11-25）
 
 - GitHub远端已接入，`main`、`develop` 和协作准备feature分支已推送。
-- 18项业务确认及D-001=B、D-002=A已追加记录，公共契约仍为 `v1.0-rc` 候选版；尚未完成双人Review。
+- 18项业务确认及D-001..D-005已追加记录，公共契约已于 2026-11-26 经 `Janovo2117` 在 PR #1 中 Approve 并合入 `develop`，升为 `v1.0` 冻结版。
 - A为朱承威（24325352），B为袁顺熙（24325311）。
 - 基础工程尚未初始化，以下构建/运行命令仍不得记录为通过。
 
@@ -60,4 +60,4 @@ docker compose up -d db
 
 - A：建立 Spring Boot、Flyway/PostgreSQL、V1基础字典与用户权限、迁移测试。
 - B：建立 React/Vite/Ant Design、路由和 API client，依据契约实现登录/错误状态骨架。
-- 共同：由 `Janovo2117` 审查已同步D-001/D-002的 `CONTRACT_FREEZE v1.0-rc` 并留下真实PR Review；此前禁止工程初始化。
+- 共同：`Janovo2117` 已在 PR #1 中 Approve `v1.0` 冻结契约（2026-11-26）；后续契约变更仍须另一成员在 PR 中审查，不得因首次冻结而免除流程。
