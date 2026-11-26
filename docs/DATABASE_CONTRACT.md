@@ -1,6 +1,6 @@
 # 数据库公共契约
 
-状态：`DRAFT v0.1`，**不是可直接执行的最终迁移**。
+状态：`CANDIDATE v1.0-rc`，等待另一成员真实 PR Review。本文是候选实现约束，不得据此宣称正式冻结或开始迁移。
 
 ## 1. 全局规则
 
@@ -42,32 +42,72 @@ resource_maintenance(maintenance_id PK, resource_unit_id FK, period tstzrange, s
 ```text
 holiday(holiday_id PK, campground_id FK, holiday_date, name, UQ(campground_id, holiday_date))
 price_rule(price_rule_id PK, campground_id FK, resource_type_id FK NULL,
-           stay_mode NULL, rule_type, operation, value, priority,
+           stay_mode NULL CHECK StayMode, rule_type, operation, value, priority,
            valid_from, valid_to, enabled, description)
 price_rule_weekday(price_rule_id PK/FK, weekday PK CHECK 1..7)
 price_rule_date(price_rule_id PK/FK, service_date PK)
 ```
 
-规则匹配：先筛选营地、资源类型/住宿模式、有效期、星期/日期；`MANUAL_OVERRIDE/SPECIAL_DATE/HOLIDAY/SEASON/WEEKEND/BASE` 依次降低默认优先级，实际用 `priority` 决定。为避免组合不确定：
+规则匹配：`resource_type.base_price` 是唯一基础价。先筛选营地、资源类型/住宿模式、有效期、星期/日期，再选择唯一的最高优先级规则；`MANUAL_OVERRIDE/SPECIAL_DATE/HOLIDAY/SEASON/WEEKEND` 只提供默认优先级建议，实际以 `priority` 为准。
 
-- 同一优先级只允许一个 `FIXED` 规则。
-- 先选择最高优先级 `FIXED` 作为基价；再按优先级应用明确标记可叠加的 `MULTIPLIER/ADDITION`。
-- 第一版建议每个计费日只采用一个胜出规则，降低解释和测试成本；是否允许叠加列为确认项。
+- `FIXED`：最终价 = `value`。
+- `MULTIPLIER`：最终价 = `base_price × value`。
+- `ADDITION`：最终价 = `base_price + value`。
+- “同一有效报价单元”定义为一个具体的 `(campground_id, resource_type_id, stay_mode, service_date)`。先找出该单元全部匹配规则；若最高 `priority` 上多于一条，则即使规则分别来自全营地、资源类型或日期范围等不同声明范围，也构成冲突。管理端发布检查必须检测规则有效集合的交集；报价端发现冲突返回 `PRICE_RULE_CONFLICT`，不得以创建时间或主键静默选胜者。v1.0-rc不叠加规则。
+
+`D-001` 已批准采用方案B：允许 `resource_type_id IS NULL AND stay_mode IS NOT NULL`，用于全营地DAY_PASS或OVERNIGHT规则。`stay_mode`始终受公共StayMode枚举/CHECK约束；由于宽范围规则允许资源类型为空，`price_rule` 不对 `(resource_type_id, stay_mode)` 建立复合外键。资源类型级规则在管理端发布时必须校验 `(resource_type_id, stay_mode)` 存在于 `resource_type_stay_mode`，报价查询也必须再次限制为该资源类型实际支持的模式；不得把全营地规则应用到不支持该模式的资源类型。
+
+### 套餐目录
+
+```text
+package_offer(package_offer_id PK, campground_id FK, code UQ, name, pricing_mode,
+              pricing_value, valid_from, valid_to, enabled, description)
+package_component(package_component_id PK, package_offer_id FK, item_type, quantity,
+                  resource_type_id FK NULL, ski_product_id FK NULL,
+                  lift_id FK NULL, equipment_model_id FK NULL)
+```
+
+`package_component` 是选购模板，不直接占库存；具体房间、场次、时段和资产在报价/下单时选定。CHECK约束保证每行只有与 `item_type` 对应的一个目标外键非空。套餐可与单选项共同进入一个订单。
+
+`package_offer.code UQ` 在v1.0-rc仅适用于“单营地部署、代码作为外部稳定标识”的边界。若项目启用多营地独立编码，必须先经契约变更将其迁移为 `UQ(campground_id, code)`；不能在同一正式版本中同时声称全局唯一和营地内唯一。
+
+套餐优惠按组件成交前小计计算：`FIXED_TOTAL` 的优惠为 `max(0, subtotal-pricing_value)`；`DISCOUNT_AMOUNT` 不得超过小计；`DISCOUNT_RATE` 取0到1之间的小数。最终优惠及其按订单项的可解释分摊写入成交快照，但v1不开放部分退款。
 
 ### 统一订单、支付与历史
 
 ```text
 customer_order(order_id PK, order_no UQ, user_id FK, campground_id FK,
-               status, currency, total_amount, expires_at, version, created_at, updated_at)
+               status, currency, total_amount, create_idempotency_key,
+               create_request_fingerprint,
+               expires_at, version, created_at, updated_at,
+               UQ(user_id, create_idempotency_key))
+order_package(order_package_id PK, order_id FK, package_offer_id FK,
+              package_code_snapshot, package_name_snapshot, pricing_mode_snapshot,
+              pricing_value_snapshot, discount_amount, subtotal_before_discount)
 order_item(order_item_id PK, order_id FK, item_type, item_name_snapshot,
-           quantity, unit_price, subtotal, price_explanation jsonb)
+           status, order_package_id FK NULL, quantity, unit_price, subtotal,
+           price_explanation jsonb)
 order_status_history(history_id PK, order_id FK, from_status, to_status, changed_by FK NULL, reason, changed_at)
-payment(payment_id PK, order_id FK, payment_no UQ, status, amount, method='SIMULATED', idempotency_key UQ, paid_at, created_at)
+order_item_status_history(history_id PK, order_item_id FK, from_status, to_status,
+                          changed_by FK NULL, reason, changed_at)
+payment(payment_id PK, order_id FK, payment_no UQ, status, amount, method='SIMULATED',
+        idempotency_key, request_fingerprint, paid_at, created_at,
+        UQ(order_id, idempotency_key))
 price_snapshot_line(snapshot_line_id PK, order_item_id FK, service_date, rule_id FK NULL,
                     rule_name_snapshot, operation_snapshot, rule_value_snapshot, amount)
 ```
 
-约束：`subtotal = quantity * unit_price` 只适用于简单项；住宿逐日合计以 `price_snapshot_line` 汇总并在服务层/过程校验。订单金额不得由客户端写入。
+约束：`subtotal = quantity * unit_price` 只适用于简单项；住宿逐日合计以 `price_snapshot_line` 汇总并在服务层/过程校验。订单总额为全部明细小计减去 `order_package.discount_amount` 之和且不得为负。订单金额和套餐优惠不得由客户端权威写入。
+
+每间具体住宿对应一个数量为1的 `order_item`；因此一个订单可以包含多间房，同时每间房保持独立价格快照、占用和履约状态。单选项的 `order_package_id` 为空，套餐组件指向对应成交套餐快照。
+
+同一订单中的全部项目必须属于同一 `campground_id`。允许多次模拟支付尝试，但数据库使用部分唯一索引保证一张订单至多存在一条 `SUCCEEDED` 支付记录，且成功金额等于订单总额。
+
+订单创建键与支付键是两个独立命名空间，均由调用方生成：
+
+- `customer_order.create_idempotency_key` 标识一次逻辑购物车提交，作用域为 `(user_id, create_idempotency_key)`；同键同请求返回原订单，同键不同请求指纹返回 `IDEMPOTENCY_CONFLICT`。
+- `payment.idempotency_key` 标识某张订单的一次逻辑支付尝试，作用域为 `(order_id, idempotency_key)`；同键同请求返回原支付结果，同键不同 `desiredOutcome` 或金额指纹返回冲突。
+- 失败后使用新键可创建下一次尝试；订单已有 `SUCCEEDED` 记录时，新键请求返回既有成功结果，不再新增成功或失败记录。
 
 ### 住宿/日营占用
 
@@ -83,10 +123,12 @@ EXCLUDE USING gist (
   resource_unit_id WITH =,
   stay_period WITH &&
 )
-WHERE (occupancy_status IN ('PENDING_PAYMENT','CONFIRMED','IN_USE'));
+WHERE (occupancy_status IN ('HELD','CONFIRMED','IN_USE'));
 ```
 
-需要 `btree_gist`。订单状态和占用状态不能靠两个任意更新入口维护；业务过程在同一事务同步，触发器仅记录历史/阻止非法不变量。
+该排斥约束需要 `btree_gist` 扩展。`occupancy_status` 取值域为公共 `OccupancyStatus` 枚举（`HELD/CONFIRMED/IN_USE/RELEASED`），以 `varchar + CHECK` 落库，**不复用 `OrderItemStatus`**：占用只表达是否仍占用时间区间，不表达履约进度。`HELD` 对应订单 `PENDING_PAYMENT` 的待支付占用；`RELEASED` 为终态，必须从排斥谓词中排除，否则已取消或过期的订单会永久阻塞同一资源。订单状态与占用状态不得由两个任意入口各自维护，须在同一业务事务中同步，触发器仅记录历史或阻止非法不变量。
+
+同一创建请求不得重复出现同一个 `resource_unit_id`。多间住宿逐行插入，任一排斥约束冲突都会回滚整个订单。
 
 ### 滑雪票、课程、缆车和核销
 
@@ -100,8 +142,21 @@ lift_slot(lift_slot_id PK, lift_id FK, start_at, end_at, capacity, reserved_quan
           UQ(lift_id, start_at), CHECK reserved between 0 and capacity)
 lift_booking(lift_booking_id PK, order_item_id UQ/FK, lift_slot_id FK, quantity)
 verification_token(token_id PK, order_item_id FK, token_hash UQ, status, valid_from, valid_until)
-verification_event(event_id PK, token_id FK, lift_slot_id FK NULL, result, verified_at, operator_id FK NULL)
+verification_event(event_id PK, token_id FK, lift_slot_id FK NULL,
+                   result CHECK VerificationResult, verified_at,
+                   operator_id FK, idempotency_key, request_fingerprint,
+                   UQ(operator_id, idempotency_key))
 ```
+
+`result` 取值域为公共 `VerificationResult` 枚举（`ACCEPTED/REJECTED`）。除操作级幂等键 `UQ(operator_id, idempotency_key)` 外，“同一令牌至多一次成功核销”必须由数据库再兜底，不能只依赖服务层行锁与状态判断：
+
+```sql
+CREATE UNIQUE INDEX uq_verification_event_accepted_token
+  ON verification_event (token_id)
+  WHERE result = 'ACCEPTED';
+```
+
+该部分唯一索引对不同管理员、不同幂等键的并发核销同样生效；`REJECTED` 事件不受限制，可多次记录用于审计。业务侧仍须先锁令牌行、校验有效期与状态，再把状态改为 `USED` 并写成功事件，三步在同一事务内完成。
 
 容量事务锁定 `ski_session`/`lift_slot FOR UPDATE`，检查后原子递增。取消按业务占用记录精确递减并写流水/历史。
 
@@ -113,7 +168,7 @@ equipment_stock(stock_id PK, model_id UQ/FK, total_quantity, maintenance_quantit
                 CHECK 0<=maintenance<=total)
 equipment_asset(asset_id PK, model_id FK, asset_code UQ, status, acquired_at, retired_at NULL)
 equipment_rental(rental_id PK, order_item_id UQ/FK, model_id FK, rental_period tstzrange,
-                 quantity, status, picked_up_at NULL, returned_at NULL)
+                 quantity, status, picked_up_at NULL, overdue_at NULL, returned_at NULL)
 equipment_rental_asset(rental_id PK/FK, asset_id PK/FK)
 equipment_maintenance(maintenance_id PK, asset_id FK, period tstzrange, status, description, cost NULL)
 inventory_movement(movement_id PK, model_id FK, asset_id FK NULL, order_item_id FK NULL,
@@ -123,6 +178,10 @@ inventory_movement(movement_id PK, model_id FK, asset_id FK NULL, order_item_id 
 - ASSET 模式：`equipment_rental_asset` 对有效租期建立资产+时间排斥（可能使用单独 `asset_reservation` 表以允许部分条件）。
 - BULK 模式：锁 `equipment_stock` 行，汇总重叠有效租赁数量；`available = total - maintenance - overlapping_reserved`，不把可用量作为独立真值列。
 - 当前状态是便捷投影，库存流水不可变，用于解释每次变化。
+
+`D-002` 已批准采用方案A：后端定时任务按可配置周期扫描 `status='PICKED_UP' AND upper(rental_period) <= CURRENT_TIMESTAMP` 的记录，以 `FOR UPDATE SKIP LOCKED` 分批锁定并幂等更新为 `OVERDUE`，同时首次写入 `overdue_at`。调度周期属于部署配置，不改变业务截止时刻；任务失败的记录留待下次扫描重试。
+
+定时任务只改变租赁状态，不写 `RELEASE` 流水、不减少重叠占用、不把资产恢复为AVAILABLE。`OVERDUE` 仍占用对应资产或批量库存；实际归还事务才转为 `RETURNED`、写 `RETURN` 流水并释放占用。实现时必须用可控时钟覆盖“截止前、恰好截止、截止后、重复扫描、并发扫描、逾期后归还”测试；当前尚无实现，因此这些测试保持NOT RUN。
 
 ### 天气与统计（P1/视图）
 
@@ -159,10 +218,16 @@ weather_alert(alert_id PK, campground_id FK, severity, start_at, end_at, title, 
 - 函数/过程：报价、创建占用、取消释放的数据库核心原语。
 - 视图：每日收入、入住率、装备可用、缆车流量。
 
-## 6. 未决数据库问题
+## 6. 混合购物车事务与锁顺序
 
-1. 一张订单一期是否严格只允许一个住宿项。
-2. 价格规则是否允许倍率叠加；建议 v1 单规则胜出。
-3. 待支付占用有效期建议15分钟，是否确认。
-4. DAY_PASS 默认时段（建议09:00–18:00）是否按资源配置。
-5. 批量装备是否允许同一型号同时存在部分单件追踪；建议一个型号固定一种 tracking_mode。
+创建订单在一个事务中完成并遵循固定顺序：
+
+1. 校验幂等键和用户购物车。
+2. 按 `resource_unit_id` 升序插入住宿占用，交由排斥约束裁决。
+3. 按 `ski_session_id` 升序锁定票务/课程容量行。
+4. 按 `lift_slot_id` 升序锁定缆车容量行。
+5. 按 `model_id` 升序锁定批量装备库存；具体资产按 `asset_id` 升序分配。
+6. 重算各项价格、套餐优惠和整单总额，写入订单/套餐/明细/快照/占用。
+7. 任意一项失败则回滚全部写入；不允许生成部分成功订单。
+
+v1只支持整单支付、整单取消和模拟整单退款。订单项独立履约用于多日期服务追踪，但不开放部分取消/部分退款API。只有全部订单项尚未开始履约时才能整单取消；任一订单项进入 `IN_USE/FULFILLED` 后拒绝顾客取消并由管理员人工处理异常。

@@ -8,26 +8,27 @@ sequenceDiagram
     participant UI as React
     participant API as BookingService
     participant DB as PostgreSQL
-    C->>UI: 选择模式、时段、人数
+    C->>UI: 选择多间住宿、套餐和单选商品
     UI->>API: 查询可用资源/报价
     API->>DB: 开放规则+维修+有效占用+价格规则
     DB-->>API: 可用资源和逐日价格
-    API-->>UI: quoteToken+价格解释
+    API-->>UI: 价格预览+逐项解释
     C->>UI: 确认下单
     UI->>API: POST /orders
-    API->>DB: BEGIN; 重算价格; 插入订单/明细/占用
-    DB-->>API: 排斥约束成功或冲突
+    API->>DB: BEGIN; 按固定顺序锁定全部资源; 重算价格
+    API->>DB: 插入订单/套餐快照/明细/全部占用
+    DB-->>API: 全部成功或任一冲突
     API->>DB: COMMIT
     API-->>UI: 待支付订单/过期时间
 ```
 
-并发最终防线是数据库排斥约束，不依赖“查询时显示可用”。
+并发最终防线是住宿/资产排斥约束和容量/库存行锁，不依赖“查询时显示可用”。任一购物车项目失败则整单回滚。
 
 ## 2. 模拟支付
 
 ```mermaid
 flowchart TD
-    A[收到支付请求+Idempotency-Key] --> B{已有相同幂等结果?}
+    A[收到支付请求+调用方生成的Idempotency-Key] --> B{本订单已有相同键和请求指纹?}
     B -- 是 --> C[返回原结果]
     B -- 否 --> D[锁定订单]
     D --> E{PENDING_PAYMENT且未过期?}
@@ -82,6 +83,34 @@ stateDiagram-v2
 
 归还检查发现损坏时，在归还事务后创建维修记录，资产进入 MAINTENANCE；维修完成后写 `MAINTENANCE_OUT` 并恢复 AVAILABLE。维修区间与租赁区间都参与资产可用性判断。
 
+`D-002` 已批准采用定时扫描：后端按可配置周期查询已到 `rental_period` 上界且状态为 `PICKED_UP` 的租赁，分批锁定后幂等转为 `OVERDUE` 并记录首次逾期时刻。重复或并发扫描不产生第二次转换；失败记录由下次扫描重试。逾期不写释放流水，实际归还后才转 `RETURNED` 并释放库存。
+
+```text
+定时触发
+  → 查询到期且PICKED_UP的租赁
+  → FOR UPDATE SKIP LOCKED分批锁定
+  → 再次校验状态和截止时刻
+  → 更新OVERDUE/overdue_at
+  → 不释放资产或批量库存
+```
+
 ## 6. 核销
 
 读取二维码/文本码 → 哈希查找令牌 → 锁令牌 → 检查有效期、状态和适用时段 → 写核销事件 → 状态改 USED。唯一约束和行锁保证重复扫描只能一次成功。
+
+调用方生成 `Idempotency-Key`，作用域为管理员+键，并保存请求指纹；同键同请求重放原结果，同键不同请求报冲突，不同键重复使用令牌报 `ALREADY_VERIFIED`。
+
+## 7. 混合购物车锁顺序
+
+```text
+幂等键/用户请求
+  → 住宿资源ID升序（排斥约束）
+  → 滑雪场次ID升序（FOR UPDATE）
+  → 缆车时段ID升序（FOR UPDATE）
+  → 批量装备型号ID升序（FOR UPDATE）
+  → 单件资产ID升序（排斥约束）
+  → 价格与套餐优惠快照
+  → 订单提交
+```
+
+固定顺序降低混合订单并发死锁风险。v1只允许整单取消；各明细可在不同日期分别履约，但共享一次付款。

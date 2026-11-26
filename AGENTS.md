@@ -2,6 +2,21 @@
 
 本文件约束仓库内的人工开发者和自动化协作代理。每次开始任务前必须先阅读本文件，再读取任务涉及的 `docs/` 契约。
 
+## 0. 强制任务与Skill流程
+
+1. 每次任务开始前完整读取本文件，并按任务读取 `.agents/skills/` 下适用的 `SKILL.md`。
+2. 公共契约修改使用 `contract-change`；Git/PR操作使用 `git-pr`；测试或检查证据使用 `test-evidence`。不适用的Skill也要在 `docs/audit/SKILL_COMPLIANCE.md` 记录理由。
+3. 操作前检查当前分支、HEAD、工作区和远端分歧，并在修改前说明计划和授权范围。
+4. 尽量最小化修改，不扩大用户授权的产品、代码、基础设施或外部操作范围。
+5. 完成后检查完整diff；不能只检查统计摘要。
+6. 执行适用测试并如实记录 `PASS`、`FAIL`、`NOT RUN` 或 `UNVERIFIED`。
+7. 同步更新 `CHANGELOG.md` 和受影响文档。
+8. 每次任务更新 `docs/audit/OPERATION_LOG.md`、`TEST_EVIDENCE.md` 和 `SKILL_COMPLIANCE.md`。
+9. 提交前必须执行 `git diff --check`，并记录命令、实际输出摘要和退出码。
+10. 未经人工批准不得合并PR、修改分支保护、重写Git历史、冒用他人身份或修改全局Git配置。
+11. 遇到契约冲突、业务歧义、错误分支、远端分歧或超出授权范围时停止对应操作并询问。
+12. Skill与日志只能提供项目内可复核的过程证据，不能证明Codex隐藏思考过程，也不能替代独立人工审计。
+
 ## 1. 技术栈（冻结）
 
 - Frontend：React + TypeScript + Vite + Ant Design + ECharts + React Router + Axios。
@@ -16,6 +31,16 @@
 - Controller 只负责协议、校验和权限入口；事务边界位于 Service；SQL 位于 MyBatis Mapper 或受版本控制的数据库对象中。
 - 数据库负责不可绕过的完整性：主外键、唯一/检查约束、住宿时间排斥、关键库存不变量。
 - 一个用户体系、一个认证体系、一个订单主表、一个库存流水体系。业务扩展使用订单明细/资源占用表，不新建平行订单系统。
+
+## 2.1 双人及多Codex唯一事实源
+
+- 数据库表、约束和关系以 `docs/DATABASE_CONTRACT.md` 为准。
+- API、DTO、响应和错误码以 `docs/API_CONTRACT.md` 为准。
+- 枚举和状态转换以 `docs/ENUMS.md` 为准。
+- 业务流程以 `docs/design/BUSINESS_FLOWS.md` 及冻结记录为准。
+- 任何成员或Codex不得重新设计第二套用户、认证、订单、库存、支付或价格体系。
+- Mock 数据必须严格符合API契约；后端完成后必须改为真实接口联调。
+- 核心共享表或API变更必须先提交设计变更，经另一成员确认后再实现。
 
 ## 3. 代码规范
 
@@ -52,11 +77,14 @@
 - 提交格式：`type(scope): summary`，如 `docs(contract): define booking states`。
 - 每次提交只包含一个可审查单元；提交前检查 `git diff --check` 和测试。
 - 禁止 `git reset --hard`、强推共享分支、直接修改他人未合并工作。
+- 每个开发任务先 `git fetch origin`，切换 `develop` 并执行 `git pull --ff-only`，再创建自己的 `feature/*` 分支。
+- 禁止从过期feature分支继续派生新模块；禁止两个成员在同一feature分支并行提交未协调的公共文件。
+- `main` 只接受从已验证 `develop` 发起的版本PR；日常feature PR目标为 `develop`。
 
 ## 7. 两人职责
 
-- A：数据库、公共契约、认证、资源、价格、订单核心、并发、数据库高级特性。
-- B：前端、滑雪票/课程/缆车、装备资产/租赁/维修及对应后端测试。
+- A（朱承威，24325352）：数据库、公共契约、认证、资源、价格、订单核心、并发、数据库高级特性。
+- B（袁顺熙，24325311）：前端、滑雪票/课程/缆车、装备资产/租赁/维修及对应后端测试。
 - 公共契约、ER图、订单关系、联调、系统测试、报告由双方共同确认。
 - B 的模块必须复用公共用户、订单和库存流水，不得另建同义体系。
 

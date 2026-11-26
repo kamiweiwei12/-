@@ -2,7 +2,7 @@
 
 Snowfield Four-Season Resort Management System 是中山大学数据库系统课程设计项目。系统面向全年运营的山地度假营地，统一管理住宿/营位预订、季节价格、模拟支付、滑雪票与课程、缆车时段容量、装备租赁和运营统计。
 
-当前状态：**第一阶段设计基线，尚未进入业务实现。** 数据库模式、公共 API 和枚举均为待双方确认的 `DRAFT v0.1`；确认前不得创建正式 Flyway 业务迁移或并行开发依赖这些契约的功能。
+当前状态：**公共契约 v1.0-rc 候选版，尚未通过双人Review，也未进入业务实现。** D-001=B、D-002=A已获项目负责人批准并同步；下一步是由 `Janovo2117` 完成正式PR Review，不是工程初始化。
 
 ## 冻结技术栈
 
@@ -26,6 +26,11 @@ Snowfield Four-Season Resort Management System 是中山大学数据库系统课
 - [团队协作](docs/TEAM_WORKFLOW.md)
 - [开发和测试计划](docs/DEVELOPMENT.md)
 - [第一阶段评审包与待确认项](docs/PHASE1_REVIEW.md)
+- [第2阶段18项决策确认清单](docs/PHASE2_DECISIONS.md)
+- [两人团队任务板](docs/TEAM_TASK_BOARD.md)
+- [公共契约候选冻结记录](docs/CONTRACT_FREEZE.md)
+- [第2阶段追加确认记录](docs/PHASE2_CONFIRMATIONS.md)
+- [审计与证据索引](docs/audit/AUDIT_LOG.md)
 
 ## 计划中的工程结构
 
