@@ -584,3 +584,26 @@
 | 维修断言 | 与请求 `[startAt,endAt)` 重叠的 `IN_PROGRESS` 维修返回 `RESOURCE_NOT_OPEN`，且订单/占用均无残留；重叠的 `COMPLETED`、`CANCELLED` 不阻断创建 |
 | 结论 | PASS：创建住宿订单已接入有效维修区间阻断；未改变公共契约或 Flyway |
 | 验证边界 | 本轮未重建测试库；独立可用性查询、开放规则、支付、取消、过期释放、HTTP/认证仍 NOT RUN；开放规则语义见 R6-08 |
+
+## TE-20261127-16：Jackson 3 JSONB、真实资源名与 clean 全量回归
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:09–23:12 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `f28e8ad` + 本轮工作区改动 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3；Jackson 3；真实 PostgreSQL 16.16 测试库，schema v5 |
+| JSONB 单项命令 | `.\mvnw.cmd -B -Pdb '-Dtest=BookingApplicationServiceIT#jacksonSerializesControlCharactersAndJsonbStoresRuleExplanation' test` |
+| JSONB 单项输出 | `Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 17.258 s`；`TARGET_EXIT_CODE=0` |
+| JSONB 数据断言 | 规则描述为实际包含 LF 的 `跨行规则\n含"引号"、\反斜杠与中文`；订单成功创建；`price_explanation` 的 `jsonb_typeof` 为 `object`；用 `#>> '{explanation,0}'` 从 PostgreSQL 解码后包含原始规则描述（含真实换行） |
+| 资源名单项命令 | `.\mvnw.cmd -B -Pdb '-Dtest=BookingApplicationServiceIT#itemNameSnapshotUsesActualResourceUnitName' test` |
+| 资源名单项输出 | `Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 13.093 s`；`TARGET_EXIT_CODE=0` |
+| 资源名数据断言 | 资源表 `resource_unit.name='甲'`；创建后查询 `order_item.item_name_snapshot`，实测等于 `甲`，不再生成“木屋资源 ID” |
+| clean 命令 | `.\mvnw.cmd -B clean` |
+| clean 完整结果 | Maven `clean:3.5.0:clean` 删除 `backend/target`；`BUILD SUCCESS`；`Total time: 0.758 s`；`CLEAN_EXIT_CODE=0`；随后核查 `DiagnosticProbeTest.txt` 与旧 `SnowfieldApplicationTests.txt` 均 `ABSENT` |
+| clean 后全量命令 | `.\mvnw.cmd -B -Pdb test`（凭据从本机健康容器环境注入但不输出） |
+| 编译/迁移输出 | clean 后重新编译30个主源码和13个测试源码；Flyway 连接 `snowfield_test` PostgreSQL 16.16，成功校验5个迁移，当前 schema v5、无需迁移 |
+| 各测试类完整汇总 | `ArchitectureTest 8`；`BookingApplicationServiceIT 24`；`ApiResponseTest 2`；`GlobalExceptionHandlerTest 3`；`AppUserMapperIT 6`；`SnowfieldApplicationIT 1`；`FlywayMigrationIT 9`；`LodgingConcurrencyIT 3`；`LodgingExclusionConstraintIT 12`；`OrderAndPaymentConstraintIT 20`；`ResourceAndPriceConstraintIT 21`；`WebContractIT 5`；各类均0失败/0错误/0跳过 |
+| Maven 最终原始汇总 | `Tests run: 114, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:10 min`；`Finished at: 2026-11-27T23:12:07+08:00`；`FULL_DB_EXIT_CODE=0` |
+| 报告目录终检 | surefire 仅含本次12个当前测试类报告；`DIAGNOSTIC_PROBE_FINAL=ABSENT`，`OLD_CONTEXT_REPORT_FINAL=ABSENT` |
+| 结论 | PASS：R6-09/R6-10 均有独立新增 IT 和 clean 后完整 PostgreSQL 回归证据；陈旧报告误导已消除 |
+| 验证边界 | 测试库未 DROP/CREATE；本条证明 clean 构建与当前 schema 回归，不替代既有空库迁移证据；支付/取消/过期、HTTP认证、开放规则仍 NOT RUN |

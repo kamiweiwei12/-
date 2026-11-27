@@ -162,3 +162,14 @@
 | contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：只实现候选契约已有维修状态/区间语义 | 未修改 DB/API/ENUM/流程；开放规则歧义登记 R6-08 并停止对应实现 | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-08
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：独立审计整改、跨 catalog/booking 修复与 clean 回归 | 完整读取；恢复 Git/任务板/开发状态；限定任务 B/C；测试、完整 diff、文档和 Git 闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：继续向已有 PR #3 提交 | fetch 后确认分支与工作树；只暂存本轮文件；提交前执行完整 diff/`git diff --check`；不合并、不改设置 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：两个新增 IT、clean 与完整 PostgreSQL 回归 | 两项 IT 各自记录实测输出/退出码；clean 后记录114项逐类汇总、Maven最终输出、退出码和陈旧报告终检 | APPLIED；TE-20261127-16 |
+| contract-change | 未读取（本轮不适用） | 不适用：没有修改 DB/API/ENUM/业务流程公共条文 | 复用既有 `resource_unit.name` 与 `item_name_snapshot` 字段；内部快照增加字段不改变外部契约 | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。

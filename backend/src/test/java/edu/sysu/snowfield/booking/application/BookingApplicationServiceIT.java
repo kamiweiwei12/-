@@ -419,6 +419,38 @@ class BookingApplicationServiceIT extends AbstractPostgresIntegrationTest {
         assertThat(scalar("SELECT count(*) FROM lodging_reservation")).isEqualTo(1);
     }
 
+    @Test
+    void jacksonSerializesControlCharactersAndJsonbStoresRuleExplanation() throws SQLException {
+        String ruleName = "跨行规则\n含\"引号\"、\\反斜杠与中文";
+        insertNamedRule(ruleName, "FIXED", "999.00", 100);
+        var command = command("idem-json-control",
+                line(cabinA, "2027-11-10T15:00+08", "2027-11-11T12:00+08"), null);
+
+        CreatedLodgingOrder created = bookingService.createLodgingOrder(command);
+
+        String decoded = scalarString("""
+                SELECT i.price_explanation #>> '{explanation,0}'
+                FROM order_item i
+                WHERE i.order_id = %d
+                """.formatted(created.orderId()));
+        assertThat(decoded).contains(ruleName);
+        assertThat(scalar("""
+                SELECT count(*) FROM order_item
+                WHERE order_id = %d AND jsonb_typeof(price_explanation) = 'object'
+                """.formatted(created.orderId()))).isEqualTo(1);
+    }
+
+    @Test
+    void itemNameSnapshotUsesActualResourceUnitName() throws SQLException {
+        var command = command("idem-real-resource-name",
+                line(cabinA, "2027-12-10T15:00+08", "2027-12-11T12:00+08"), null);
+
+        CreatedLodgingOrder created = bookingService.createLodgingOrder(command);
+
+        assertThat(scalarString("SELECT item_name_snapshot FROM order_item WHERE order_id = "
+                + created.orderId())).isEqualTo("甲");
+    }
+
     // ---- 辅助 ----
 
     private void insertRule(String ruleType, String operation, String value, int priority) throws SQLException {
@@ -426,6 +458,22 @@ class BookingApplicationServiceIT extends AbstractPostgresIntegrationTest {
                 INSERT INTO price_rule (campground_id, rule_type, operation, value, priority, valid_from, valid_to)
                 VALUES (%d, '%s', '%s', %s, %d, '2026-01-01', '2027-12-31')
                 """.formatted(campgroundId, ruleType, operation, value, priority));
+    }
+
+    private void insertNamedRule(String description, String operation, String value, int priority) throws SQLException {
+        try (Connection connection = dataSource.getConnection();
+             var statement = connection.prepareStatement("""
+                     INSERT INTO price_rule
+                         (campground_id, description, rule_type, operation, value, priority, valid_from, valid_to)
+                     VALUES (?, ?, 'MANUAL_OVERRIDE', ?, ?, ?, '2026-01-01', '2027-12-31')
+                     """)) {
+            statement.setLong(1, campgroundId);
+            statement.setString(2, description);
+            statement.setString(3, operation);
+            statement.setBigDecimal(4, new BigDecimal(value));
+            statement.setInt(5, priority);
+            statement.executeUpdate();
+        }
     }
 
     private void enableDayPass() throws SQLException {

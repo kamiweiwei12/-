@@ -478,3 +478,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 契约判断 | OVERNIGHT 开放规则校验粒度在候选契约中不明确，登记 R6-08，不擅自实现；`contract-change` 不适用 |
 | 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志 |
 | 剩余 | BK-01 独立可用性查询/开放规则；BK-02 支付/取消/过期/状态历史；认证/HTTP；前端 |
+
+## OP-20261127-08：第三次独立审计任务 B/C 整改
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:04–23:16 +08:00（Asia/Taipei） |
+| 分类 | FIX + TEST + DB + GIT |
+| 输入 | 用户提供第三次独立只读审计报告，明确授权任务 B/C |
+| 范围 | Jackson 3 JSON 序列化、真实资源名快照、两个新增 IT、Maven clean 与完整 PostgreSQL 回归；不改公共契约、Flyway、API或前端 |
+| 实施 | 移除手写 JSON 转义；catalog 资源快照携带 `resource_unit.name`；booking 写真实名称；新增控制字符 JSONB 与资源名两项 IT |
+| 单项测试 | 两个新增 IT 分别单独运行，均1/1 PASS、退出码0；含真实 LF 的规则描述成功写入并从 PostgreSQL JSONB 解码 |
+| clean 回归 | `mvn clean` 退出码0；陈旧报告消失；clean 后 `-Pdb` 114/114 PASS、退出码0；TE-20261127-16 |
+| Diff 门禁 | 检查完整代码/测试/文档 diff；`git diff --check` 无空白错误、退出码0，仅有既有 CRLF→LF 提示 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志 |
+| 契约/迁移 | 只补齐已有 `resource_unit.name` → `item_name_snapshot` 数据链路；无 DB/API/ENUM/业务流程条文变化，`contract-change` 不适用 |
+| 剩余 | R6-08 开放规则待 Review；BK-02 支付/取消/过期；认证/HTTP；前端 |

@@ -33,6 +33,7 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
                 row.resourceUnitId(),
                 row.resourceTypeId(),
                 row.campgroundId(),
+                row.unitName(),
                 null, // stayMode 由调用方按选择项校验，见 supportsStayMode
                 row.capacity(),
                 row.basePrice(),

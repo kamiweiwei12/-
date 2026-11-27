@@ -9,6 +9,7 @@ import java.math.BigDecimal;
  * @param resourceUnitId 资源单元 ID
  * @param resourceTypeId 所属资源类型 ID
  * @param campgroundId   所属营地 ID
+ * @param name           具体资源名称（用于订单历史快照）
  * @param stayMode       该资源的住宿模式
  * @param capacity       单元容量
  * @param basePrice      资源类型基础价（唯一基础价来源，契约 §价格）
@@ -18,6 +19,7 @@ public record ResourceSnapshot(
         long resourceUnitId,
         long resourceTypeId,
         long campgroundId,
+        String name,
         String stayMode,
         int capacity,
         BigDecimal basePrice,

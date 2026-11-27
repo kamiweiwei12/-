@@ -22,6 +22,8 @@ import edu.sysu.snowfield.lodging.application.LodgingReservationPort;
 import edu.sysu.snowfield.order.application.OrderWritePort;
 import edu.sysu.snowfield.pricing.application.PricingQueryPort;
 import edu.sysu.snowfield.pricing.domain.PriceCalculator;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 预订编排中心（ADR-009）：唯一开启跨模块事务的地方。
@@ -38,6 +40,7 @@ public class BookingApplicationService {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
     private static final int HOLD_MINUTES = 15;
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final CatalogQueryPort catalogQuery;
     private final PricingQueryPort pricingQuery;
@@ -232,7 +235,7 @@ public class BookingApplicationService {
         subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);
         String explanationJson = toJson(explanations);
 
-        return new PricedLine(line, resource, "木屋资源 " + line.resourceUnitId(),
+        return new PricedLine(line, resource, resource.name(),
                 subtotal, subtotal, explanationJson, snapshots);
     }
 
@@ -242,15 +245,11 @@ public class BookingApplicationService {
     }
 
     private static String toJson(List<String> parts) {
-        StringBuilder sb = new StringBuilder("{\"explanation\":[");
-        for (int i = 0; i < parts.size(); i++) {
-            if (i > 0) {
-                sb.append(',');
-            }
-            sb.append('"').append(parts.get(i).replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
+        try {
+            return JSON.writeValueAsString(java.util.Map.of("explanation", parts));
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("价格说明 JSON 序列化失败", exception);
         }
-        sb.append("]}");
-        return sb.toString();
     }
 
     /** 计价中间结果。 */
