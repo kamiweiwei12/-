@@ -20,6 +20,11 @@ public class OrderWriteAdapter implements OrderWritePort {
     }
 
     @Override
+    public void lockCreateIdempotencyKey(long userId, String idempotencyKey) {
+        orderMapper.lockCreateIdempotencyKey(userId, idempotencyKey);
+    }
+
+    @Override
     public long createOrder(NewOrder order) {
         OrderMapper.NewOrderParams params = new OrderMapper.NewOrderParams();
         params.orderNo = order.orderNo();

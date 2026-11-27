@@ -523,3 +523,47 @@
 | HTTP 层下单接口 `POST /orders` | NOT RUN | 需先接 Spring Security（创建订单要求认证，S4）；本轮只验证 application 层事务 |
 | 套餐、滑雪、缆车、装备混购 | NOT RUN | 依赖 B 侧模块表与 `package_component` |
 | 容量资源（ski_session/lift_slot 行锁） | NOT RUN | SKI-01/LIFT-01 |
+
+## TE-20261127-13：当前进度复核与回归检查
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 22:22–22:25 +08:00（Asia/Taipei） |
+| 分支/HEAD | `feature/database-core` / `66910b1cacce7c2722f4f534a0f893a61311c102`；工作树在审查前干净；相对 `origin/develop` ahead 10 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；`snowfield-db` PostgreSQL 16.16，容器 healthy，端口 5433 |
+| 默认测试命令 | 在 `backend/` 执行 `.\mvnw.cmd -B test`，未注入数据库凭据 |
+| 默认测试输出 | `Tests run: 14, Failures: 0, Errors: 1`；`SnowfieldApplicationTests.contextLoads` 因 Flyway 无法连接 PostgreSQL 失败；退出码 1 |
+| 默认测试结论 | **FAIL**：证明当前默认测试实际依赖数据库，和 POM/开发文档“默认不连数据库”的声明不一致；沙箱网络限制是本次连接失败的直接触发条件，但静态配置同时证明该测试会启动数据源/Flyway |
+| 数据库回归命令 | 从健康容器读取现有测试凭据但不输出密码，执行 `.\mvnw.cmd -B -Pdb test` |
+| 数据库回归输出 | Flyway 校验 5 个迁移，测试库已在 v5、无需迁移；`Tests run: 101, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；退出码 0 |
+| 数据库回归结论 | **PASS（有限边界）**：当前现有测试库上的 101 项回归通过；因为数据库不是本轮 DROP/CREATE 的干净库，不能把本条证据表述为空库全量迁移验证 |
+| GitHub | PR #2/#3 均 OPEN、MERGEABLE、`REVIEW_REQUIRED`、0 reviews、无 `statusCheckRollup`；均请求 `Janovo2117` Review |
+| 静态审查 | 发现 R6-02~R6-05；DAY_PASS、资源类型/模式兼容、并发幂等均无现有测试覆盖 |
+
+### 本轮未运行
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| 干净库 DROP/CREATE 后 V1~V5 全量迁移 | NOT RUN | 本轮是进度审查，避免破坏正在共享使用的测试库；沿用既有 TE-20261127-11 证据，本条不重复声称 |
+| DAY_PASS 同日与跨时区边界 | NOT RUN | 现有测试未覆盖，已登记 R6-04 |
+| 同一创建幂等键并发 | NOT RUN | 现有测试仅顺序重放，已登记 R6-02 |
+| 前端/认证/支付/取消/过期/性能 | NOT RUN | 对应实现尚不存在或未进入本轮范围 |
+
+## TE-20261127-14：创建订单并发幂等、住宿模式、DAY_PASS 与默认测试隔离
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 22:33–22:37 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `66910b1` + 本轮工作区改动 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；真实 PostgreSQL 16.16 测试库，schema 已在 v5 |
+| 默认命令 | 在 `backend/` 无数据库凭据执行 `.\mvnw.cmd -B test` |
+| 默认结果 | `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；退出码0 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb test -Dtest=BookingApplicationServiceIT` |
+| 定向结果 | `Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；退出码0 |
+| 完整命令 | `.\mvnw.cmd -B -Pdb test` |
+| 完整结果 | Flyway 成功校验5个迁移；`Tests run: 110, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；退出码0 |
+| 并发断言 | 同用户/同键/同请求8线程同时进入：仅1个结果 `replayed=false`、7个重放、数据库仅1张订单；同键异请求2线程：1成功、1稳定 `IDEMPOTENCY_CONFLICT` |
+| 模式/时间断言 | 不支持 DAY_PASS 的资源在写订单前返回 `RESOURCE_NOT_OPEN`；支持后同一业务日生成1条价格快照；跨 `-08:00` 输入偏移量仍归一到 `Asia/Shanghai` 正确服务日 |
+| 其他边界 | 同一请求非重叠重复资源被拒；空幂等键、人数0均返回 `VALIDATION_FAILED`，不依赖数据库异常 |
+| 结论 | PASS：R6-02~R6-05、R6-07 的修复均有真实可执行证据；公共契约状态仍为候选，结论不等于人工Review |
+| 验证边界 | 本轮未 DROP/CREATE 测试库，不新增/修改 Flyway；维修/开放规则、支付、取消、过期释放、HTTP/认证仍 NOT RUN |

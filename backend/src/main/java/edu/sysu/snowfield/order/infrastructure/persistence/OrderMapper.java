@@ -16,6 +16,18 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface OrderMapper {
 
+    /**
+     * PostgreSQL 事务级 advisory lock：锁随事务提交/回滚自动释放。
+     * 64 位 hash 碰撞只会造成无害的额外串行化，不影响正确性。
+     */
+    @Select("""
+            SELECT pg_advisory_xact_lock(
+                hashtextextended(CAST(#{userId} AS text) || ':' || #{idempotencyKey}, 0)
+            )
+            """)
+    String lockCreateIdempotencyKey(@Param("userId") long userId,
+                                    @Param("idempotencyKey") String idempotencyKey);
+
     class NewOrderParams {
         public Long orderId;
         public String orderNo;

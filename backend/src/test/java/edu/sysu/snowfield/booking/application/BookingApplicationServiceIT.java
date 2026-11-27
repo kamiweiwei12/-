@@ -6,7 +6,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -237,6 +243,147 @@ class BookingApplicationServiceIT extends AbstractPostgresIntegrationTest {
                         .isEqualTo(ErrorCode.VALIDATION_FAILED));
     }
 
+    @Test
+    void unsupportedStayModeIsRejectedBeforeOrderCreation() throws SQLException {
+        var command = command("idem-mode-unsupported",
+                line(cabinA, "DAY_PASS", "2027-01-10T09:00+08", "2027-01-10T18:00+08"), null);
+
+        assertThatThrownBy(() -> bookingService.createLodgingOrder(command))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.RESOURCE_NOT_OPEN));
+        assertThat(scalar("SELECT count(*) FROM customer_order")).isZero();
+    }
+
+    @Test
+    void dayPassOnOneBusinessDayProducesOnePriceSnapshot() throws SQLException {
+        enableDayPass();
+        var command = command("idem-day-pass",
+                line(cabinA, "DAY_PASS", "2027-01-10T09:00+08", "2027-01-10T18:00+08"), null);
+
+        CreatedLodgingOrder created = bookingService.createLodgingOrder(command);
+
+        assertThat(new BigDecimal(created.totalAmount())).isEqualByComparingTo("1280.00");
+        assertThat(scalar("SELECT count(*) FROM price_snapshot_line")).isEqualTo(1);
+        assertThat(scalarString("SELECT service_date::text FROM price_snapshot_line"))
+                .isEqualTo("2027-01-10");
+    }
+
+    @Test
+    void dayPassServiceDateUsesShanghaiBusinessZoneInsteadOfInputOffset() throws SQLException {
+        enableDayPass();
+        // 两个输入偏移下分别显示 1/10 与 1/11，但换算到上海均为 1/11 08:30–19:00。
+        var command = command("idem-day-pass-zone",
+                line(cabinA, "DAY_PASS", "2027-01-10T16:30-08", "2027-01-11T03:00-08"), null);
+
+        bookingService.createLodgingOrder(command);
+
+        assertThat(scalarString("SELECT service_date::text FROM price_snapshot_line"))
+                .isEqualTo("2027-01-11");
+    }
+
+    @Test
+    void concurrentSameIdempotencyKeyAndRequestReplaysSingleOrder() throws Exception {
+        int workers = 8;
+        var command = command("idem-concurrent-same",
+                line(cabinA, "2027-04-10T15:00+08", "2027-04-12T12:00+08"), null);
+        ExecutorService executor = Executors.newFixedThreadPool(workers);
+        CountDownLatch ready = new CountDownLatch(workers);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<CreatedLodgingOrder>> futures = new ArrayList<>();
+        try {
+            for (int i = 0; i < workers; i++) {
+                futures.add(executor.submit(() -> {
+                    ready.countDown();
+                    start.await(10, TimeUnit.SECONDS);
+                    return bookingService.createLodgingOrder(command);
+                }));
+            }
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<CreatedLodgingOrder> results = new ArrayList<>();
+            for (Future<CreatedLodgingOrder> future : futures) {
+                results.add(future.get(20, TimeUnit.SECONDS));
+            }
+
+            assertThat(results).extracting(CreatedLodgingOrder::orderId).containsOnly(results.getFirst().orderId());
+            assertThat(results).filteredOn(result -> !result.replayed()).hasSize(1);
+            assertThat(results).filteredOn(CreatedLodgingOrder::replayed).hasSize(workers - 1);
+            assertThat(scalar("SELECT count(*) FROM customer_order")).isEqualTo(1);
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void concurrentSameIdempotencyKeyWithDifferentRequestsReturnsStableConflict() throws Exception {
+        var first = command("idem-concurrent-different",
+                line(cabinA, "2027-05-10T15:00+08", "2027-05-12T12:00+08"), null);
+        var second = command("idem-concurrent-different",
+                line(cabinB, "2027-06-10T15:00+08", "2027-06-12T12:00+08"), null);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<Object> firstFuture = executor.submit(() -> attemptCreate(first, ready, start));
+            Future<Object> secondFuture = executor.submit(() -> attemptCreate(second, ready, start));
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<Object> outcomes = List.of(
+                    firstFuture.get(20, TimeUnit.SECONDS),
+                    secondFuture.get(20, TimeUnit.SECONDS));
+
+            assertThat(outcomes).filteredOn(CreatedLodgingOrder.class::isInstance).hasSize(1);
+            assertThat(outcomes).filteredOn(outcome -> outcome instanceof BusinessException exception
+                    && exception.getErrorCode() == ErrorCode.IDEMPOTENCY_CONFLICT).hasSize(1);
+            assertThat(scalar("SELECT count(*) FROM customer_order")).isEqualTo(1);
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void duplicateResourceInOneRequestIsRejectedBeforeWritingOrder() throws SQLException {
+        var duplicate = twoLineCommand("idem-duplicate-resource",
+                line(cabinA, "2027-07-10T15:00+08", "2027-07-12T12:00+08"),
+                line(cabinA, "2027-08-10T15:00+08", "2027-08-12T12:00+08"));
+
+        assertThatThrownBy(() -> bookingService.createLodgingOrder(duplicate))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.VALIDATION_FAILED));
+        assertThat(scalar("SELECT count(*) FROM customer_order")).isZero();
+    }
+
+    @Test
+    void blankIdempotencyKeyIsRejected() {
+        var command = command(" ", line(cabinA, "2027-01-10T15:00+08", "2027-01-12T12:00+08"), null);
+
+        assertThatThrownBy(() -> bookingService.createLodgingOrder(command))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.VALIDATION_FAILED));
+    }
+
+    @Test
+    void nonPositiveGuestCountIsRejectedBeforeDatabaseConstraint() {
+        var command = new CreateLodgingOrderCommand(userId, "idem-zero-guests", List.of(
+                new CreateLodgingOrderCommand.LodgingLine(
+                        cabinA, "OVERNIGHT",
+                        OffsetDateTime.parse("2027-01-10T15:00+08:00"),
+                        OffsetDateTime.parse("2027-01-12T12:00+08:00"),
+                        0)), null);
+
+        assertThatThrownBy(() -> bookingService.createLodgingOrder(command))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.VALIDATION_FAILED));
+    }
+
     // ---- 辅助 ----
 
     private void insertRule(String ruleType, String operation, String value, int priority) throws SQLException {
@@ -244,6 +391,23 @@ class BookingApplicationServiceIT extends AbstractPostgresIntegrationTest {
                 INSERT INTO price_rule (campground_id, rule_type, operation, value, priority, valid_from, valid_to)
                 VALUES (%d, '%s', '%s', %s, %d, '2026-01-01', '2027-12-31')
                 """.formatted(campgroundId, ruleType, operation, value, priority));
+    }
+
+    private void enableDayPass() throws SQLException {
+        execute("INSERT INTO resource_type_stay_mode (resource_type_id, stay_mode) VALUES (%d, 'DAY_PASS')"
+                .formatted(resourceTypeId));
+    }
+
+    private Object attemptCreate(CreateLodgingOrderCommand command,
+                                 CountDownLatch ready,
+                                 CountDownLatch start) throws InterruptedException {
+        ready.countDown();
+        start.await(10, TimeUnit.SECONDS);
+        try {
+            return bookingService.createLodgingOrder(command);
+        } catch (BusinessException exception) {
+            return exception;
+        }
     }
 
     private CreateLodgingOrderCommand command(String idemKey,
@@ -259,8 +423,12 @@ class BookingApplicationServiceIT extends AbstractPostgresIntegrationTest {
     }
 
     private CreateLodgingOrderCommand.LodgingLine line(long unitId, String start, String end) {
+        return line(unitId, "OVERNIGHT", start, end);
+    }
+
+    private CreateLodgingOrderCommand.LodgingLine line(long unitId, String stayMode, String start, String end) {
         return new CreateLodgingOrderCommand.LodgingLine(
-                unitId, "OVERNIGHT", OffsetDateTime.parse(start), OffsetDateTime.parse(end), 2);
+                unitId, stayMode, OffsetDateTime.parse(start), OffsetDateTime.parse(end), 2);
     }
 
     private void execute(String sql) throws SQLException {
@@ -276,6 +444,15 @@ class BookingApplicationServiceIT extends AbstractPostgresIntegrationTest {
              ResultSet rs = statement.executeQuery(sql)) {
             rs.next();
             return rs.getLong(1);
+        }
+    }
+
+    private String scalarString(String sql) throws SQLException {
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            rs.next();
+            return rs.getString(1);
         }
     }
 }

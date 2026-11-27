@@ -6,7 +6,9 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,10 +72,18 @@ public class BookingApplicationService {
         if (command.lodgings() == null || command.lodgings().isEmpty()) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED, "至少需要一个住宿项");
         }
+        if (command.idempotencyKey() == null || command.idempotencyKey().isBlank()) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED, "Idempotency-Key 不能为空");
+        }
+        if (command.lodgings().stream().anyMatch(java.util.Objects::isNull)) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED, "住宿项不能为空");
+        }
 
         String fingerprint = command.fingerprint();
 
-        // 1. 幂等：同键同请求返回原结果，同键不同请求冲突
+        // 1. 幂等：先按 (userId,key) 取得事务级锁，消除并发“先查后插”竞态；
+        // 同键同请求返回原结果，同键不同请求冲突。
+        orderWrite.lockCreateIdempotencyKey(command.userId(), command.idempotencyKey());
         var existing = orderWrite.findByUserAndIdempotencyKey(command.userId(), command.idempotencyKey());
         if (existing.isPresent()) {
             var order = existing.get();
@@ -89,8 +99,13 @@ public class BookingApplicationService {
         List<PricedLine> pricedLines = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
         Long campgroundId = null;
+        Set<Long> selectedResourceIds = new HashSet<>();
 
         for (var line : command.lodgings()) {
+            if (!selectedResourceIds.add(line.resourceUnitId())) {
+                throw new BusinessException(ErrorCode.VALIDATION_FAILED,
+                        "同一创建请求不能重复选择资源：" + line.resourceUnitId());
+            }
             ResourceSnapshot resource = catalogQuery.findResourceUnit(line.resourceUnitId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND,
                             "资源不存在或不可售：" + line.resourceUnitId()));
@@ -103,6 +118,13 @@ public class BookingApplicationService {
             }
 
             validatePeriod(line);
+            if (!catalogQuery.supportsStayMode(resource.resourceTypeId(), line.stayMode())) {
+                throw new BusinessException(ErrorCode.RESOURCE_NOT_OPEN,
+                        "该资源类型不支持住宿模式：" + line.stayMode());
+            }
+            if (line.guestCount() <= 0) {
+                throw new BusinessException(ErrorCode.VALIDATION_FAILED, "入住人数必须大于 0");
+            }
             if (line.guestCount() > resource.capacity()) {
                 throw new BusinessException(ErrorCode.VALIDATION_FAILED,
                         "入住人数超过该资源容量：" + resource.capacity());
@@ -115,12 +137,18 @@ public class BookingApplicationService {
 
         total = total.setScale(2, RoundingMode.HALF_UP);
 
-        if (command.expectedTotal() != null
-                && !command.expectedTotal().isBlank()
-                && new BigDecimal(command.expectedTotal()).setScale(2, RoundingMode.HALF_UP).compareTo(total) != 0) {
-            throw new BusinessException(ErrorCode.PRICE_CHANGED,
-                    "价格已变化，请确认最新报价",
-                    java.util.Map.of("newTotal", total.toPlainString()));
+        if (command.expectedTotal() != null && !command.expectedTotal().isBlank()) {
+            BigDecimal expected;
+            try {
+                expected = new BigDecimal(command.expectedTotal()).setScale(2, RoundingMode.HALF_UP);
+            } catch (NumberFormatException exception) {
+                throw new BusinessException(ErrorCode.VALIDATION_FAILED, "expectedTotal 必须是十进制金额");
+            }
+            if (expected.compareTo(total) != 0) {
+                throw new BusinessException(ErrorCode.PRICE_CHANGED,
+                        "价格已变化，请确认最新报价",
+                        java.util.Map.of("newTotal", total.toPlainString()));
+            }
         }
 
         // 3. 建订单主体
@@ -160,7 +188,8 @@ public class BookingApplicationService {
     }
 
     private PricedLine priceLine(CreateLodgingOrderCommand.LodgingLine line, ResourceSnapshot resource) {
-        List<LocalDate> dates = CreateLodgingOrderCommand.serviceDates(line.startAt(), line.endAt());
+        List<LocalDate> dates = CreateLodgingOrderCommand.serviceDates(
+                line.stayMode(), line.startAt(), line.endAt(), BUSINESS_ZONE);
         if (dates.isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_TIME_RANGE, "住宿区间必须至少覆盖一个服务日");
         }

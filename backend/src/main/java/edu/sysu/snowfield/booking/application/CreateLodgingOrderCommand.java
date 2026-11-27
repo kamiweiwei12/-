@@ -2,6 +2,8 @@ package edu.sysu.snowfield.booking.application;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -66,10 +68,22 @@ public record CreateLodgingOrderCommand(
         }
     }
 
-    /** 按资源类型分组用的小工具：把选择的日期展开为住宿夜所覆盖的服务日。 */
-    public static List<LocalDate> serviceDates(java.time.OffsetDateTime startAt, java.time.OffsetDateTime endAt) {
-        LocalDate from = startAt.toLocalDate();
-        LocalDate to = endAt.toLocalDate();
+    /**
+     * 按营地业务时区展开服务日。
+     * OVERNIGHT 使用半开住宿夜区间；DAY_PASS 在同一业务日内计一个服务日。
+     */
+    public static List<LocalDate> serviceDates(String stayMode,
+                                               OffsetDateTime startAt,
+                                               OffsetDateTime endAt,
+                                               ZoneId businessZone) {
+        LocalDate from = startAt.atZoneSameInstant(businessZone).toLocalDate();
+        LocalDate to = endAt.atZoneSameInstant(businessZone).toLocalDate();
+        if ("DAY_PASS".equals(stayMode)) {
+            return from.equals(to) ? List.of(from) : List.of();
+        }
+        if (!"OVERNIGHT".equals(stayMode)) {
+            return List.of();
+        }
         Map<LocalDate, Boolean> dates = new LinkedHashMap<>();
         for (LocalDate d = from; d.isBefore(to); d = d.plusDays(1)) {
             dates.put(d, Boolean.TRUE);

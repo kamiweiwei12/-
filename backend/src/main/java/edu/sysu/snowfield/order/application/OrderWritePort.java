@@ -11,6 +11,12 @@ import java.util.List;
  */
 public interface OrderWritePort {
 
+    /**
+     * 在当前事务内锁定一个“用户 + 创建幂等键”命名空间。
+     * 同键请求必须先串行化，再读取既有订单，避免并发先查后插竞态。
+     */
+    void lockCreateIdempotencyKey(long userId, String idempotencyKey);
+
     /** 创建订单主体，返回生成的 orderId。 */
     long createOrder(NewOrder order);
 

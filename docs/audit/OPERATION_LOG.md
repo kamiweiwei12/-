@@ -435,3 +435,32 @@ booking/application/BookingApplicationService  (@Transactional)
 ### 关于未接 HTTP 层
 
 契约要求「创建订单必须登录」，而 Spring Security/JWT 属 S4 范围（`ARCHITECTURE.md` 版本矩阵）。本轮**只实现并验证 application 层事务**，不暴露 `POST /orders` 端点，避免产生一个无认证的订单创建入口。这是有意的顺序选择，已在 TE-20261127-12 标注。
+
+## OP-20261127-05：当前进度、缺陷与下一步审查
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 22:18–22:35 +08:00（Asia/Taipei） |
+| 分类 | REVIEW + TEST + GIT |
+| 授权边界 | 只审查与记录；不改业务代码/契约语义，不提交、不推送、不合并、不修改 GitHub 设置 |
+| 启动状态 | `feature/database-core` / `66910b1`；工作树干净；fetch 后相对 `origin/develop` ahead 10；本地 `develop` behind 12 |
+| GitHub | PR #2/#3 均 OPEN、MERGEABLE、REVIEW_REQUIRED、0 review、无 CI checks；请求 `Janovo2117` |
+| 审查结果 | 数据库/约束/并发基础较扎实，但契约未批准且实现未集成；登记 R6-01~R6-06，其中并发幂等、stayMode 校验、DAY_PASS 与默认测试隔离为优先修复项 |
+| 测试 | 默认测试 FAIL（退出码1）；真实 PostgreSQL `-Pdb` 回归 101/101 PASS（退出码0），边界见 TE-20261127-13 |
+| 文档同步 | 更新 DEVELOPMENT、CHANGELOG Known limitations、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志；TEAM_TASK_BOARD 无状态变化，未改；公共契约无语义变更 |
+| 外部操作 | 仅 `git fetch` 与只读 `gh pr view/list/status`；未留言、未 Review、未改 PR、未合并 |
+| 推荐顺序 | 先完成 PR #2 人工 Review → 修 R6-02~R6-05 并补测试 → 完成 BK-01 可用性与 BK-02 支付/取消/过期 → 接认证/HTTP → B 侧前端与 P0-B |
+
+## OP-20261127-06：不等待 Review，先修创建订单核心缺陷
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 22:30–22:40 +08:00（Asia/Taipei） |
+| 分类 | FIX + TEST + DB + GIT |
+| 用户授权 | `Janovo2117` Review 预计1–2天；明确要求先完成不依赖 Review 的后续工作 |
+| 范围 | 修 R6-02~R6-05 与请求内重复资源；不改公共契约、V1~V5、前端或B侧模块 |
+| 实施 | advisory transaction lock 串行同用户同键；调用现有 stayMode 支持关系；按上海时区计算 OVERNIGHT/DAY_PASS；默认上下文测试改 `*IT`；补输入边界 |
+| 测试 | 默认13/13、定向20/20、完整PostgreSQL 110/110，全部退出码0；TE-20261127-14 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志 |
+| 契约/迁移 | 无契约语义变更；无 Flyway 变更；`contract-change` 不适用 |
+| 剩余 | BK-01 可用性/维修/开放规则；BK-02 支付/取消/过期/状态历史；认证/HTTP；前端 |

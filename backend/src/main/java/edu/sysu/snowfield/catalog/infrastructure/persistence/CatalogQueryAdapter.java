@@ -38,6 +38,14 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
                 true));
     }
 
+    @Override
+    public boolean supportsStayMode(long resourceTypeId, String stayMode) {
+        if (stayMode == null || stayMode.isBlank()) {
+            return false;
+        }
+        return resourceUnitMapper.countStayModeSupport(resourceTypeId, stayMode) > 0;
+    }
+
     private static boolean isSellable(String status) {
         // ResourceStatus 枚举只有 ACTIVE/MAINTENANCE/INACTIVE/RETIRED（docs/ENUMS.md）；
         // 只有 ACTIVE 可售，其余一律视为不可预订。

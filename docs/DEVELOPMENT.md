@@ -1,10 +1,13 @@
 # 开发计划、环境与风险
 
-## 当前仓库状态（2026-11-26 更新）
+## 当前仓库状态（2026-11-27 更新）
 
-- 第一、二阶段已完成：公共契约 `v1.0` 冻结提交在 PR #2 中等待 `Janovo2117` Review（分支保护要求 1 个 approve）。
-- 后端 S1（Boot 4.1.3 骨架）与 S2（MyBatis 4.1.0 + Flyway 12.4.0 + PostgreSQL 16 接入）已完成并真实验证。
+- 公共契约仍是 `v1.0-rc`：PR #2 可合并但为 `REVIEW_REQUIRED`，0 review，等待 `Janovo2117`；尚不能称为正式冻结。
+- 后端 S1/S2 已完成；PR #3 在 `feature/database-core` 上相对 `origin/develop` 领先 10 个提交，同样等待 Review，尚未集成到 `develop`。
+- 数据库已实现 V1~V5（身份、营地/资源、价格、订单/模拟支付表、住宿占用）；真实 PostgreSQL `-Pdb` 回归 110 个测试通过（TE-20261127-14）。
+- BK-02 创建阶段已补齐并发幂等、重复资源防线、住宿模式校验与上海业务时区 DAY_PASS 计价；支付、取消、过期释放、状态历史、HTTP/认证入口仍未实现。BK-01 的可用性查询、维修/开放规则联动仍有缺口。
 - 前端工程尚未创建。
+- 默认测试已恢复为无数据库构建：13 个单元/架构测试通过；数据库上下文门禁改为 `SnowfieldApplicationIT`，仅在 `-Pdb` 运行（TE-20261127-14）。
 
 ## S2 数据库环境（已验证）
 
@@ -21,10 +24,12 @@ docker compose up -d db
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-db-init.ps1
 
 # 4. 默认构建（不连数据库）
-backend/mvnw -B test
+Push-Location backend
+.\mvnw.cmd -B test
 
 # 5. 数据库集成测试（必须显式 -Pdb）
-backend/mvnw -B -Pdb test
+.\mvnw.cmd -B -Pdb test
+Pop-Location
 ```
 
 - 开发库 `snowfield`、测试库 `snowfield_test` 分离，测试不得污染开发库。
@@ -55,8 +60,10 @@ backend/mvnw -B -Pdb test
 ## 测试命令（S2 起）
 
 ```powershell
-backend/mvnw -B test            # 单元 + 架构测试，不连数据库
-backend/mvnw -B -Pdb test       # 追加真实 PostgreSQL 集成测试（*IT）
+Push-Location backend
+.\mvnw.cmd -B test              # 单元 + 架构测试，不连数据库
+.\mvnw.cmd -B -Pdb test         # 追加真实 PostgreSQL 集成测试（*IT）
+Pop-Location
 npm --prefix frontend run lint  # 前端工程建立后
 docker compose up -d db
 ```
