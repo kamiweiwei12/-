@@ -19,7 +19,7 @@
 | DB-01 | V1基础扩展/用户/角色迁移 | P0 | INF-03 | A | 朱承威 | IN_REVIEW | V1 身份与权限三表迁移已落地，唯一/检查/外键反例测试通过（TE-20261126-16）；完整 DB-01 范围待补 |
 | DB-02 | 营地/资源/开放规则迁移 | P0 | DB-01 | A | 朱承威 | IN_REVIEW | `V2__campground_and_resource.sql` 七表落地，干净库全量迁移成功；约束反例测试通过（TE-20261127-01/02） |
 | DB-03 | 价格规则/日历迁移 | P0 | GOV-04, DB-02 | A | 朱承威 | IN_REVIEW | `V3__price_rules_and_calendar.sql` 四表落地，D-001 方案B 已验证；**冲突规则测试待 BK-01**（应用层报价逻辑未实现），`R5-04` 未裁定 |
-| DB-04 | 统一订单/价格快照迁移 | P0 | DB-01, DB-03 | A | UNASSIGNED | TODO | 状态、金额、历史和幂等约束通过 |
+| DB-04 | 统一订单/价格快照迁移 | P0 | DB-01, DB-03 | A | 朱承威 | IN_REVIEW | V4 八表落地，幂等作用域与单一成功支付约束已用反例验证（TE-20261127-05）；**`package_component` 待 B 侧表**、**`lodging_reservation` 待 BK-03 并发同轮验证**；订单金额跨行汇总一致性待 BK-02 |
 | BK-01 | 住宿可用性和报价 | P0 | DB-02, DB-03 | A | UNASSIGNED | TODO | 半开区间/维修/开放/价格用例通过 |
 | BK-02 | 创建、支付、取消住宿订单 | P0 | DB-04, BK-01 | A | UNASSIGNED | TODO | 单事务、幂等、释放和回滚测试通过 |
 | BK-03 | 住宿并发测试 | P0 | BK-02 | 共同 | UNASSIGNED | TODO | 100并发抢1资源仅1成功且无残留 |

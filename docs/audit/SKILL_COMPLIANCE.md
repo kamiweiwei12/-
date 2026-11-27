@@ -96,3 +96,14 @@
 | contract-change | `.agents/skills/contract-change/SKILL.md` | **不适用**：V2/V3 是既有契约结构的 DDL 落地 | 逐条对照 `DATABASE_CONTRACT.md` §2 与 `ENUMS.md` 的枚举值编写约束，**未修改任何契约条文**；`R5-04` 未裁定的语义刻意不写死，避免事实上改动契约 | NOT APPLICABLE（契约条文无变更） |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-02
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：PR 催办与数据库迁移 | 完整读取；启动检查（分支/HEAD/工作树/远端 fetch 后仍 0 behind）；任务分类 `DB`+`TEST`+`GIT`；风险判断：V4 基于未冻结契约、部分表依赖 B 侧，已登记；§13 闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：本轮提交与推送 | 完整读取；只暂存明确文件；`git diff --check`；提交前核对 `origin/develop` 未变；**未合并 PR、未改分支保护、未代替队友 approve** | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：迁移与约束测试 | 完整读取；空库重建后全量执行；首次失败（测试自身缺陷）保留为 TE-20261127-05 并追加复测；刻意未做项 TE-20261127-06 标 NOT RUN 并说明原因；记录真实退出码 0 | APPLIED |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | **不适用**：未修改契约条文 | 仅引用 `DATABASE_CONTRACT.md` §2 与 `ENUMS.md` 作为 DDL 依据；围绕未裁定的 D-005 决策在 PR #2 评论中说明下游影响，而未擅自改契约 | NOT APPLICABLE（契约条文无变更） |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。

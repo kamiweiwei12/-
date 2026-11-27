@@ -34,6 +34,8 @@
 - 新增 `V3__price_rules_and_calendar.sql`：`holiday`/`price_rule`/`price_rule_weekday`/`price_rule_date` 四表，按 D-001 方案B 允许 `resource_type_id=NULL`，`stay_mode` 受枚举 CHECK；`R5-04` 双空语义未裁定，刻意不加 CHECK。
 - 新增 `ResourceAndPriceConstraintIT`：21 个约束反例/正例测试，覆盖营地、季节、资源、开放规则、维修区间、价格规则与节假日唯一性。
 - 接入 `springdoc-openapi 3.2.0`（父 POM 为 Boot 4.1.2，与项目 4.1.3 同代），暴露 `/v3/api-docs` 与 Swagger UI。
+- 新增 `V4__order_and_payment.sql`：`package_offer`/`customer_order`/`order_package`/`order_item`/`order_status_history`/`order_item_status_history`/`payment`/`price_snapshot_line` 八表；含创建幂等键 `(user_id,key)` 与支付幂等键 `(order_id,key)` 作用域约束、`uq_payment_succeeded_per_order` 部分唯一索引（一单至多一条成功支付）、`method` 恒为 `SIMULATED` 的 CHECK。
+- 新增 `OrderAndPaymentConstraintIT`：20 个订单/支付/套餐/快照约束测试。
 - 新增 `WebContractIT`：以 `RANDOM_PORT` 真实启动内嵌服务器，验证统一成功信封、错误信封、404→`RESOURCE_NOT_FOUND` 映射、错误响应不泄漏堆栈/SQL/内部包名、OpenAPI 文档可访问且含健康接口。
 
 ### Changed

@@ -324,3 +324,36 @@ git diff --check
 
 - 本机原生 PostgreSQL 18 占用 5432，项目容器映射 5433。
 - 干净库重建命令：`DROP DATABASE snowfield_test` → `CREATE DATABASE snowfield_test` → `mvn -B -Pdb test`。
+
+## OP-20261127-02：催办 PR #2 评审并落地 DB-04 订单主表（不含住宿占用）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 10:02–10:12 +08:00（Asia/Shanghai） |
+| 任务 | 按用户「同意，执行」：执行上一轮建议的第 3 项（催 PR #2 评审）与第 1 项中不涉及住宿占用约束的订单主表部分 |
+| 分支 | `feature/database-core`，开始 HEAD `f7c3ae3`，ahead origin/develop 7、behind 0；`origin/develop` 仍为 `3404221` |
+| 用户授权 | 明确同意催促 PR #2 评审，并同意先建订单主表（暂不做 `lodging_reservation` 与排斥约束） |
+| 修改/新增文件 | 新增 `V4__order_and_payment.sql`、`OrderAndPaymentConstraintIT.java`；审计与日志文件 |
+| 操作 | `gh pr comment 2` 留评审请求；按契约 §2 写 V4（7 张表）；空库重建后 V1→V4 全量执行；补 20 个约束测试 |
+| Skill | `project-governance`、`git-pr`、`test-evidence` 应用；`contract-change` **不适用**：V4 是既有契约结构的 DDL 落地，未改任何契约条文 |
+| 测试 | `mvn -B -Pdb test`（空库）→ 74 测试全绿，退出码 0；`OrderAndPaymentConstraintIT` 20 用例全绿；首次失败已保留（TE-20261127-05）；`mvn -B test` → 14 测试全绿 |
+| 结果 | PR #2 已留评审评论；V1→V4 迁移链在干净库成功；19 张业务表落地 |
+| 风险 | ① V4 基于未冻结契约；② `package_component` 待 B 侧表；③ `lodging_reservation` 与排斥约束刻意未做；④ 订单金额跨行汇总一致性未在数据库强制 |
+
+### 催办 PR #2 的具体动作
+
+- 复核发现 `Janovo2117` **已在** `reviewRequests` 中（`REVIEW_REQUIRED`，0 条 review），重复 re-request 只会产生噪音，故未重复请求。
+- 改为在 PR #2 留评论（[issuecomment-7207792703](https://github.com/kamiweiwei12/snowfield-resort-system/pull/2#issuecomment-7207792703)），聚焦说明：① DB-04 依赖本 PR 的契约表述；② **D-005 批准与否对下游迁移的直接后果**——批准则 V4 无需改动，否决则需新增迁移加 CHECK；③ 其余 18 个文件为状态与审计回填，非新业务规则。
+- 未代替队友评审、未 approve、未合并。
+
+### V4 的范围决策（重要）
+
+契约中订单域有 9 组表，本轮**只建其中 7 张**：
+
+- 已建：`package_offer`、`customer_order`、`order_package`、`order_item`、`order_status_history`、`order_item_status_history`、`payment`、`price_snapshot_line`（8 张，见迁移注释）。
+- **未建 `package_component`**：其外键指向 `ski_product`/`lift`/`equipment_model`，属 B 侧模块（SKI-01/LIFT-01/EQ-01）尚未建立，强建会引入指向不存在表的悬空设计。
+- **未建 `lodging_reservation`**：住宿时间排斥约束是并发正确性核心（BK-03 要求 100 并发抢 1 资源仅 1 成功），必须与并发测试同轮验证；先建表会给出「已实现」的假象。
+
+### 关于订单总额汇总的数据库层选择
+
+契约要求「住宿逐日合计以 `price_snapshot_line` 汇总并在服务层/过程校验」，且 ADR-009 规定跨模块事务由 `BookingApplicationService` 编排。若在数据库用跨表聚合触发器强制「订单总额 = Σ明细 − Σ优惠」，会与事务编排设计冲突且难以在并发下正确表达。因此 V4 只落地可独立验证的局部不变量，跨行汇总一致性明确留给 BK-02 应用层，并在 TEST_EVIDENCE TE-20261127-06 中标注 NOT RUN，不声称已完成。

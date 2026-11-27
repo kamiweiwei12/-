@@ -387,3 +387,45 @@
 | 价格规则冲突检测（`PRICE_RULE_CONFLICT`） | NOT RUN | 属应用层报价逻辑（BK-01），尚未实现 |
 | `R5-04` 双空语义裁定 | OPEN | 契约未裁定，迁移刻意不加 CHECK，测试仅固定当前行为 |
 | 开发库 `snowfield` 迁移 | NOT RUN | 刻意不迁移开发库，只在隔离测试库验证 |
+
+## TE-20261127-04：DB-04 订单/支付迁移（V4）在干净库全量执行
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 10:04–10:08 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `f7c3ae3` + 本轮工作区改动 |
+| 环境 | Windows；JDK 21.0.12；Maven 3.9.16；`snowfield-db`（PostgreSQL 16.16, 5433，Up 11 hours healthy）；测试库**先 DROP 再 CREATE** |
+| 命令 | `DROP DATABASE snowfield_test` → `CREATE DATABASE`；`mvn -B -Pdb test`；`mvn -B test` |
+| 输出摘要 | `Migrating schema "public" to version "1..4"`；`Successfully applied 4 migrations to schema "public", now at version v4 (execution time 00:00.551s)`；合计 `Tests run: 74, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 默认构建 | `Tests run: 14, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 隔离性 | 开发库 `snowfield` 表数 = `0`；测试库 `flyway_schema_history` 中 `1/2/3/4` 均 `success = true` |
+| 退出码 | 0（两条命令均为 0） |
+| 结论 | PASS：V1→V2→V3→V4 链式迁移在空库全量成功，未污染开发库 |
+
+## TE-20261127-05：订单/支付/套餐/快照约束测试
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 10:06–10:08 +08:00（Asia/Shanghai） |
+| 命令 | `mvn -B -Pdb test -Dtest=OrderAndPaymentConstraintIT` |
+| 首次失败（保留） | `Tests run: 20, Failures: 1` —— `orderRejectsUnknownStatus` 断言「预期抛异常但未抛」，退出码 1 |
+| 根因 | 测试自身缺陷：辅助方法 `insertOrder(orderNo, idemKey, fingerprint)` 的第三个参数是**指纹**而非状态，导致测试实际插入了合法订单。**非产品代码缺陷** |
+| 修复 | 改为直接构造带 `status='PAID'` 的 INSERT 语句 |
+| 复测输出摘要 | `Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 覆盖内容 | 订单：`order_no` 唯一、**创建幂等键作用域 `(user_id,key)`**（同用户复键冲突、跨用户可复用）、状态枚举、总额非负、币种必须 CNY；明细：`item_type` 五类枚举全接受、非法类型被拒、`quantity>0`、订单删除级联明细；支付：**幂等键作用域 `(order_id,key)`**（跨订单可复用、同订单复键冲突）、**`uq_payment_succeeded_per_order` 部分唯一索引保证一单一成功**、多次失败可重试、`method` 恒为 `SIMULATED`（拒真实支付）、`SUCCEEDED` 必须有 `paid_at`；套餐：优惠不得超过小计、`DISCOUNT_RATE` 不得超过 1；快照：被快照引用的价格规则不可删除（保证可追溯性） |
+| 退出码 | 0 |
+| 结论 | PASS：契约中「数据库负责不可绕过的完整性」的幂等作用域与单一成功支付两条硬约束均有反例证据 |
+| 验证边界 | 见 TE-20261127-06 |
+
+## TE-20261127-06：DB-04 本轮刻意未覆盖的范围
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| `lodging_reservation` 住宿排斥约束 | NOT RUN | 按用户决定，需与 BK-03 并发测试（100 并发抢 1 资源）一起验证，单独建表会造成未验证的假象 |
+| `package_component` | NOT RUN | 外键指向 `ski_product`/`lift`/`equipment_model`，属 B 侧模块（SKI-01/LIFT-01/EQ-01）尚未建立 |
+| 订单并发/幂等运行时测试 | NOT RUN | 无业务用例，待 BK-02 |
+| 订单金额汇总一致性 | NOT RUN | 契约要求「服务层/过程校验」，应用层未实现 |
+
+### 关于「订单总额 = 明细小计 − 优惠」的数据库层处理
+
+契约原文为「订单总额为全部明细小计减去 `order_package.discount_amount` 之和且不得为负」，并要求「住宿逐日合计以 `price_snapshot_line` 汇总并在**服务层/过程**校验」。因此 V4 **未**在数据库用触发器强制跨行汇总（跨表聚合触发器会与 ADR-009 的事务编排设计冲突），只落地了可独立验证的局部不变量：`total_amount >= 0`、`quantity > 0`、`subtotal >= 0`、`discount_amount <= subtotal_before_discount`。跨行汇总一致性属 BK-02 的应用层职责，尚未实现也未验证。
