@@ -12,3 +12,8 @@ spring:
 # 集成测试直接调用过期服务，不等待后台调度；避免长套件运行期间异步扫描共享测试数据。
 snowfield:
   order-expiry-initial-delay-ms: 3600000
+  security:
+    jwt-secret: test-only-snowfield-jwt-secret-32-bytes-minimum
+    issuer: https://snowfield.test
+    access-token-ttl: 30m
+    allowed-origin: http://localhost:5173

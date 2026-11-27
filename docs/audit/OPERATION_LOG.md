@@ -542,3 +542,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志；无新增问题需写 ISSUES |
 | 契约/迁移 | 实现既有 PENDING_PAYMENT→EXPIRED 与占用释放流程；未改 DB/API/ENUM/流程条文，`contract-change` 不适用 |
 | 剩余 | 认证HTTP入口；开放规则 R6-08；独立可用性查询；前端 |
+
+## OP-20261128-01：S4 JWT 安全边界与支付 HTTP
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 00:20–00:44 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + FEAT + TEST + INTEGRATION + GIT |
+| 用户授权 | 同意按推荐继续认证基础与订单 HTTP；Review 仍异步等待 |
+| 启动状态 | `feature/database-core` / `97818a0`，工作树干净；fetch 后远端功能分支一致，相对 `origin/develop` ahead16/behind0；PR #3 待 Review |
+| 范围 | Security/JWT/CORS/统一401/403、访问令牌输出端口、模拟支付 Controller/DTO、真实 HTTP/PostgreSQL IT；不改公共契约、Flyway、注册/登录或不完整订单DTO |
+| 实施 | 无状态 JWT Resource Server；HS256环境密钥、最长30分钟；CUSTOMER/ADMIN路径授权；JWT `sub` 唯一提供 userId；支付继续在 application 做对象所有权二次校验 |
+| 测试 | 定向最终13/13、Web组合18/18、默认13/13、完整PostgreSQL146/146，最终均退出码0；首次缓存权限、DB沙箱权限、issuer格式及CORS Bean歧义失败均保留在 TE-20261128-01 |
+| 提交门禁 | 完整审查25个暂存文件（918新增/12删除）；敏感信息扫描只命中环境变量、占位符及测试专用密钥；`git diff --cached --check` 无输出、退出码0 |
+| 发现 | R6-11：认证与部分订单HTTP DTO不完整，停止对应实现并等待双方 Review；未修改候选契约 |
+| 文档 | 更新 README、DEVELOPMENT、任务板、ARCHITECTURE版本矩阵、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志和 `.env.example` |
+| 剩余 | R6-11 契约 Review 后实现登录/注册/当前用户/创建查询取消 HTTP；R6-08；独立可用性；前端 |

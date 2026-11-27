@@ -206,3 +206,14 @@
 | contract-change | 未读取（本轮不适用） | 不适用：实现既有 EXPIRED 状态转换与住宿释放 | 未修改 DB/API/ENUM/业务流程条文或 Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261128-01
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：认证安全、跨 identity/payment/common 的 HTTP 集成 | 完整恢复 Git/远端/任务板/日志/契约/架构；分类 SECURITY+FEAT+TEST；遇 DTO 歧义停止对应实现；测试与文档闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：继续向 PR #3 增加独立安全提交 | fetch确认0 behind及工作树干净；只暂存本单元文件；提交前完整diff/敏感信息/`git diff --check`；不合并、不改设置 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：安全、HTTP、数据库与构建验证 | 保留3类首次失败；追加定向13、组合18、默认13、全量146的实测输出/退出码和NOT RUN边界 | APPLIED；TE-20261128-01 |
+| contract-change | 未读取（本轮不适用） | 不适用：只实现候选契约已有Bearer/JWT/角色/PaymentResponse；发现Auth/Order DTO缺口后停止并登记R6-11 | 未修改 API/DB/ENUM/流程条文或Flyway，等待另一成员Review | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。

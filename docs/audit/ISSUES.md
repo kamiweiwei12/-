@@ -32,5 +32,6 @@
 | R6-08 | MEDIUM | 候选契约定义了 `resource_open_rule`，但未说明 OVERNIGHT 应校验入住时刻、完整住宿区间还是逐业务日窗口 | 由双方 Review 明确语义后，再同步流程/测试并实现；当前不猜测规则 | DB/API/业务流程、BK-01 | 擅自实现可能错误拒绝跨夜住宿或放过闭店时段 | 契约交叉审查；裁定后补边界集成测试 | 共同 | OPEN_FOR_REVIEW；维修联动已实现，开放规则暂缓 |
 | R6-09 | HIGH | `BookingApplicationService.toJson` 手写转义未处理 JSON 控制字符，含换行规则描述会令 `::jsonb` 写入失败 | 改用项目既有 Jackson 3 `JsonMapper` 序列化结构化 Map，并用真实 PostgreSQL IT 覆盖换行/引号/反斜杠/中文 | booking 创建订单、价格说明 JSONB | 合法规则描述可能导致整单事务失败 | 单项 IT 与 clean 全量回归 TE-20261127-16 | A | REMEDIATED_PENDING_REVIEW |
 | R6-10 | MEDIUM | `item_name_snapshot` 固定为“木屋资源 ID”，没有保存真实 `resource_unit.name` | catalog 快照增加资源名并由 booking 原样写入订单明细；不改数据库/API契约 | catalog/booking、订单历史快照 | 非木屋资源名称错误，历史订单与报表失真 | 单项 IT 与 clean 全量回归 TE-20261127-16 | A | REMEDIATED_PENDING_REVIEW |
+| R6-11 | HIGH | API 契约只列出注册/登录/当前用户端点，但未定义请求/响应字段；创建订单完整响应和取消响应也不足以从现有 application 输出无歧义映射 | 由双方 Review 补齐 Auth/User/Order/Cancel DTO 后再实现对应 HTTP；本轮只实现不需猜字段的 JWT 验证边界与既有完整 PaymentResponse | `API_CONTRACT.md`、identity/payment/booking API、前端公共类型 | 若后端先猜字段，前端会形成第二套 DTO，且可能泄漏或错误接受客户端 userId | 契约 Review + 后续真实 HTTP DTO/权限测试；当前安全/支付证据 TE-20261128-01 | 共同 | OPEN_FOR_REVIEW；未修改公共契约 |
 
 关闭规则：`RESOLVED_IN_RC` 不是正式关闭；只有另一成员Review、适用测试及合并证据齐全后才可改为 `CLOSED`。

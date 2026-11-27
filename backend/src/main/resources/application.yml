@@ -41,3 +41,11 @@ logging:
   level:
     root: INFO
     edu.sysu.snowfield: INFO
+
+snowfield:
+  security:
+    # 至少32字节，只从环境变量注入；缺失时安全配置拒绝启动。
+    jwt-secret: ${SNOWFIELD_JWT_SECRET}
+    issuer: https://snowfield.local
+    access-token-ttl: 30m
+    allowed-origin: ${SNOWFIELD_CORS_ALLOWED_ORIGIN:http://localhost:5173}

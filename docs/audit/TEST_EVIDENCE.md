@@ -668,3 +668,25 @@
 | 全量结果 | Flyway 成功校验5个迁移；`Tests run: 133, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:19 min`；`Finished at: 2026-11-27T23:36:56+08:00`；`FULL_DB_EXIT_CODE=0` |
 | 结论 | PASS：待支付订单过期、状态历史、住宿释放、重复扫描幂等及非待支付过滤均有真实 PostgreSQL 证据 |
 | 验证边界 | 未实际等待墙钟触发调度，测试直接调用同一事务方法；未做多 JVM 实例竞争实测；测试库未 DROP/CREATE；HTTP/认证仍 NOT RUN |
+
+## TE-20261128-01：Spring Security/JWT 与模拟支付真实 HTTP
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 00:27–00:43 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `97818a0` + 本轮工作区改动；fetch 后与 `origin/feature/database-core` 一致、相对 `origin/develop` ahead16/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3；Spring Security 7.1.3；真实 PostgreSQL 16.16 测试库，schema v5 |
+| 首次默认命令/失败 | `.\mvnw.cmd -B test` 在沙箱内首次执行；Maven 无权创建用户 `.m2` 的新依赖目录，`AccessDeniedException`；`BUILD FAILURE`；退出码1。获准写缓存并下载官方依赖后，同命令13/13 PASS、退出码0；这是环境权限失败，不冒充代码失败 |
+| 首次定向命令/失败 | `.\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT' test` 在沙箱内无法连接 `127.0.0.1:5433`，根因 `SocketException: Permission denied: getsockopt`；10项上下文错误、退出码1。获准访问本机测试库后复测10/10 PASS、退出码0 |
+| 扩展定向首次结果 | 增至13项后首次运行12通过/1错误、退出码1；错误为 issuer 普通字符串不能由 `Jwt.getIssuer()` 转为 URL。改成 URI issuer 后同命令 `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 18.868 s`；退出码0 |
+| CORS统一错误首次结果 | 为把未知Origin的默认纯文本403改为统一错误信封，首次加入自定义 `CorsFilter` 后应用上下文因存在2个 `CorsConfigurationSource` 候选而无法启动；`Tests run: 13, Failures: 0, Errors: 13, Skipped: 0`；退出码1。对项目配置源使用明确 `@Qualifier` 后复测 `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 32.187 s`；退出码0 |
+| CORS强化终检 | 增加“不返回 `Access-Control-Allow-Origin` 且响应正文不回显恶意Origin”断言后，再次执行同一定向命令；`Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 23.239 s`；`Finished at: 2026-11-28T00:43:02+08:00`；退出码0 |
+| 安全断言 | 缺令牌→`AUTH_REQUIRED`；畸形/非法subject/非法role→`TOKEN_INVALID`；过期→`TOKEN_EXPIRED`；CUSTOMER访问admin→`ACCESS_DENIED`；ADMIN通过安全层后得到路由404；错误信封不泄漏异常/包名/SQL |
+| 令牌/密码/CORS | HS256密钥至少32字节且拒绝占位符；`iss/sub/roles/iat/exp` 验证；签发时效1800秒、无refresh；BCrypt strength12 单向哈希匹配；仅配置的 `http://localhost:5173` 预检通过，未知来源返回403与统一 `ACCESS_DENIED` JSON且不回显该Origin |
+| 支付 HTTP | Owner JWT 的 `sub` 被映射为 application userId；成功响应ID为字符串且无内部 `replayed` 字段；同HTTP幂等键重放仅1条支付；非Owner得到 `ORDER_NOT_FOUND`；缺幂等头/非法结果为 `VALIDATION_FAILED` 且不写支付 |
+| Web组合命令 | `.\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT,WebContractIT' test` |
+| Web组合结果 | `Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；既有健康、404、不泄漏内部信息和OpenAPI均未被安全过滤链破坏；`BUILD SUCCESS`；退出码0 |
+| 最终默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 5.059 s`；`Finished at: 2026-11-28T00:40:11+08:00`；退出码0 |
+| 最终全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移，schema v5；`Tests run: 146, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:23 min`；`Finished at: 2026-11-28T00:41:43+08:00`；退出码0 |
+| 结论 | PASS：JWT验证/授权/CORS/统一安全错误与模拟支付真实HTTP均有可执行证据；失败与修复链均保留 |
+| 验证边界 | 测试库未DROP/CREATE；未实现注册/登录/当前用户、创建/查询/取消订单HTTP（R6-11）；未做登录限流、密钥轮换、真实前端或JMeter；这些均为 NOT RUN |
