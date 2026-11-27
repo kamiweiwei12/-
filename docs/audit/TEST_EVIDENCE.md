@@ -690,3 +690,21 @@
 | 最终全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移，schema v5；`Tests run: 146, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:23 min`；`Finished at: 2026-11-28T00:41:43+08:00`；退出码0 |
 | 结论 | PASS：JWT验证/授权/CORS/统一安全错误与模拟支付真实HTTP均有可执行证据；失败与修复链均保留 |
 | 验证边界 | 测试库未DROP/CREATE；未实现注册/登录/当前用户、创建/查询/取消订单HTTP（R6-11）；未做登录限流、密钥轮换、真实前端或JMeter；这些均为 NOT RUN |
+
+## TE-20261128-02：JWT 错误签名/issuer 与安全配置 fail-fast
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 00:52–00:56 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `765d3ab` + 本轮工作区改动；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead17/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Security 7.1.3；真实 PostgreSQL 16.16测试库，schema v5 |
+| 默认命令 | 在 `backend/` 执行 `.\mvnw.cmd -B test` |
+| 默认输出 | `SecurityConfigTest` 5/5；总计 `Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 9.657 s`；退出码0 |
+| 配置断言 | 合法配置产生HmacSHA256密钥；缺失/短/占位密钥，缺失/相对/非HTTP issuer，缺失/零/超过30分钟TTL，通配/非HTTP/带路径CORS Origin均在启动配置阶段拒绝 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT' test` |
+| 定向输出 | `Tests run: 14, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 16.323 s`；退出码0 |
+| HTTP反例 | 使用有效密钥但错误issuer、缺失roles、另一密钥签名的token均返回401 `TOKEN_INVALID`，不泄漏验证细节 |
+| 全量命令 | `.\mvnw.cmd -B -Pdb test` |
+| 全量输出 | Flyway校验5个迁移、schema v5；`Tests run: 152, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:31 min`；`Finished at: 2026-11-28T00:56:40+08:00`；退出码0 |
+| 结论 | PASS：R6-12 配置错误在启动期失败，JWT错误issuer/角色/签名在真实HTTP边界稳定拒绝 |
+| 验证边界 | 未验证密钥轮换、外部密钥管理服务、登录限流或真实反向代理Origin；测试库未DROP/CREATE，本条不替代空库迁移证据 |

@@ -1,5 +1,6 @@
 package edu.sysu.snowfield.support;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,6 +10,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 
+import javax.crypto.spec.SecretKeySpec;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -19,13 +21,14 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
@@ -127,6 +130,21 @@ class SecurityPaymentWebIT {
                 HttpStatus.UNAUTHORIZED, "TOKEN_INVALID");
         assertError(() -> paymentRequest(order.orderId(), signedToken(Long.toString(userId), List.of("ROOT"), 300),
                         "pay-bad-role", "SUCCESS"),
+                HttpStatus.UNAUTHORIZED, "TOKEN_INVALID");
+    }
+
+    @Test
+    void tokenWithWrongIssuerMissingRolesOrWrongSignatureIsRejected() {
+        assertError(() -> paymentRequest(order.orderId(),
+                        signedToken("https://other-issuer.test", Long.toString(userId), List.of("CUSTOMER"), 300),
+                        "pay-wrong-issuer", "SUCCESS"),
+                HttpStatus.UNAUTHORIZED, "TOKEN_INVALID");
+        assertError(() -> paymentRequest(order.orderId(),
+                        signedToken("https://snowfield.test", Long.toString(userId), List.of(), 300),
+                        "pay-missing-role", "SUCCESS"),
+                HttpStatus.UNAUTHORIZED, "TOKEN_INVALID");
+        assertError(() -> paymentRequest(order.orderId(), tokenSignedWithDifferentSecret(),
+                        "pay-wrong-signature", "SUCCESS"),
                 HttpStatus.UNAUTHORIZED, "TOKEN_INVALID");
     }
 
@@ -278,10 +296,14 @@ class SecurityPaymentWebIT {
     }
 
     private String signedToken(String subject, List<String> roles, long expiresInSeconds) {
+        return signedToken("https://snowfield.test", subject, roles, expiresInSeconds);
+    }
+
+    private String signedToken(String issuer, String subject, List<String> roles, long expiresInSeconds) {
         Instant now = Instant.now();
         Instant issuedAt = expiresInSeconds < 0 ? now.minusSeconds(600) : now;
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("https://snowfield.test")
+                .issuer(issuer)
                 .subject(subject)
                 .issuedAt(issuedAt)
                 .expiresAt(now.plusSeconds(expiresInSeconds))
@@ -289,6 +311,23 @@ class SecurityPaymentWebIT {
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).type("JWT").build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
+    }
+
+    private String tokenSignedWithDifferentSecret() {
+        var key = new SecretKeySpec(
+                "different-test-signing-secret-at-least-32-bytes".getBytes(StandardCharsets.UTF_8),
+                "HmacSHA256");
+        JwtEncoder otherEncoder = NimbusJwtEncoder.withSecretKey(key).algorithm(MacAlgorithm.HS256).build();
+        Instant now = Instant.now();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer("https://snowfield.test")
+                .subject(Long.toString(userId))
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(300))
+                .claim("roles", List.of("CUSTOMER"))
+                .build();
+        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).type("JWT").build();
+        return otherEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }
 
     private void assertError(ThrowingCall call, HttpStatus status, String code) {

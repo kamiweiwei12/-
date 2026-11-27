@@ -1,5 +1,6 @@
 package edu.sysu.snowfield.identity.infrastructure.security;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collection;
@@ -78,11 +79,13 @@ public class SecurityConfig {
         if (properties.issuer() == null || properties.issuer().isBlank()) {
             throw new IllegalStateException("JWT issuer 不能为空");
         }
+        validateHttpUri(properties.issuer(), "JWT issuer", false);
         if (properties.accessTokenTtl() == null || properties.accessTokenTtl().isNegative()
                 || properties.accessTokenTtl().isZero()
                 || properties.accessTokenTtl().compareTo(Duration.ofMinutes(30)) > 0) {
             throw new IllegalStateException("access token 有效期必须大于0且不超过30分钟");
         }
+        validateHttpUri(properties.allowedOrigin(), "CORS allowed origin", true);
         return new SecretKeySpec(key, "HmacSHA256");
     }
 
@@ -160,5 +163,21 @@ public class SecurityConfig {
 
     private static OAuth2TokenValidatorResult invalid(String description) {
         return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", description, null));
+    }
+
+    private static void validateHttpUri(String value, String label, boolean originOnly) {
+        try {
+            URI uri = URI.create(value == null ? "" : value);
+            boolean http = "http".equalsIgnoreCase(uri.getScheme())
+                    || "https".equalsIgnoreCase(uri.getScheme());
+            boolean hasOriginOnlyPath = uri.getPath() == null || uri.getPath().isEmpty();
+            if (!uri.isAbsolute() || !http || uri.getHost() == null || uri.getUserInfo() != null
+                    || uri.getQuery() != null || uri.getFragment() != null
+                    || (originOnly && !hasOriginOnlyPath)) {
+                throw new IllegalArgumentException();
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException(label + " 必须是合法的绝对 HTTP(S) URI", ex);
+        }
     }
 }

@@ -558,3 +558,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 发现 | R6-11：认证与部分订单HTTP DTO不完整，停止对应实现并等待双方 Review；未修改候选契约 |
 | 文档 | 更新 README、DEVELOPMENT、任务板、ARCHITECTURE版本矩阵、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志和 `.env.example` |
 | 剩余 | R6-11 契约 Review 后实现登录/注册/当前用户/创建查询取消 HTTP；R6-08；独立可用性；前端 |
+
+## OP-20261128-02：JWT 与安全配置负面门禁
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 00:52–00:57 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + TEST + FIX + GIT |
+| 用户授权 | 明确要求不等待审查，继续下一项工作 |
+| 启动状态 | `feature/database-core` / `765d3ab`；工作树干净；fetch后功能分支0/0、相对develop ahead17/behind0 |
+| 范围 | 安全配置fail-fast与JWT负面测试；不改API/DB/ENUM/Flyway或前端 |
+| 实施 | issuer限制为绝对HTTP(S) URI；CORS限制为不含用户信息/路径/查询/片段的HTTP(S) origin；补错误issuer、缺角色、错误签名HTTP反例 |
+| 测试 | 默认18/18、定向HTTP 14/14、完整PostgreSQL 152/152，均0失败/0错误/0跳过、退出码0；TE-20261128-02 |
+| 发现 | R6-12：旧配置只判非空，无法在启动期拒绝URI语义错误或危险CORS值；已修复并登记 |
+| 提交门禁 | 完整审查12个暂存文件（250新增/9删除）；敏感信息扫描仅命中测试专用密钥；`git diff --cached --check` 无输出、退出码0 |
+| 契约/迁移 | 未修改公共契约、迁移或状态机；`contract-change`不适用 |
+| 剩余 | R6-11、R6-08仍不猜测；下一步继续不依赖其裁定的安全/测试工作 |

@@ -217,3 +217,14 @@
 | contract-change | 未读取（本轮不适用） | 不适用：只实现候选契约已有Bearer/JWT/角色/PaymentResponse；发现Auth/Order DTO缺口后停止并登记R6-11 | 未修改 API/DB/ENUM/流程条文或Flyway，等待另一成员Review | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261128-02
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：认证配置修复与安全测试 | 恢复Git/任务板/日志/API/架构；限定不改契约/迁移；执行测试、文档与Git闭环 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：配置单测、真实HTTP负面测试及全量回归 | 记录默认18、定向14、全量152的命令、输出、退出码及NOT RUN边界 | APPLIED；TE-20261128-02 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立安全加固提交 | fetch确认0 behind；仅暂存本单元；提交前完整diff/敏感信息/`git diff --check`；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：配置约束和测试加固不改变公开API/DB/ENUM/流程 | 未修改契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
