@@ -228,3 +228,14 @@
 | contract-change | 未读取（本轮不适用） | 不适用：配置约束和测试加固不改变公开API/DB/ENUM/流程 | 未修改契约或Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-03
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：OpenAPI安全元数据与真实HTTP测试 | 恢复Git/任务板/日志/API/架构；限定只同步既有认证事实；执行测试、文档与Git闭环 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：OpenAPI JSON、Swagger UI、默认及全量回归 | 记录定向6、默认18、全量153的命令、输出、退出码及浏览器人工测试NOT RUN边界 | APPLIED；TE-20261128-03 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立OpenAPI提交 | fetch确认0 behind；仅暂存本单元；提交前完整diff/敏感信息/`git diff --check`；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：只描述现有Bearer认证，不改变公开路径、DTO、状态、错误或数据库 | 未修改契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。

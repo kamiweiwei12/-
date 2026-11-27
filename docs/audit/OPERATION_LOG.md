@@ -574,3 +574,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 提交门禁 | 完整审查12个暂存文件（250新增/9删除）；敏感信息扫描仅命中测试专用密钥；`git diff --cached --check` 无输出、退出码0 |
 | 契约/迁移 | 未修改公共契约、迁移或状态机；`contract-change`不适用 |
 | 剩余 | R6-11、R6-08仍不猜测；下一步继续不依赖其裁定的安全/测试工作 |
+
+## OP-20261128-03：OpenAPI Bearer JWT 与 Swagger UI
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 01:02–01:08 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + DOC/API-METADATA + TEST + GIT |
+| 用户授权 | 同意继续推荐的OpenAPI JWT安全声明与Swagger验证 |
+| 启动状态 | `feature/database-core` / `f288983`；工作树干净；fetch后功能分支0/0、相对develop ahead18/behind0 |
+| 范围 | 现有JWT认证的OpenAPI元数据、支付操作安全标记、Swagger UI/生成文档测试；不新增端点或改运行时授权/DTO/数据库 |
+| 实施 | 注册 `bearerAuth` HTTP bearer/JWT方案；仅模拟支付操作引用；不设置全局security requirement |
+| 测试 | WebContractIT 6/6、默认18/18、完整PostgreSQL 153/153，均0失败/0错误/0跳过、退出码0；TE-20261128-03 |
+| 发现 | 无新增业务缺陷；公开健康接口与受保护支付接口的文档边界正确 |
+| 提交门禁 | 完整审查11个暂存文件（149新增/4删除）；敏感信息扫描无命中；`git diff --cached --check` 无输出、退出码0 |
+| 契约/迁移 | 只同步既有认证事实到OpenAPI，不修改API字段/路径/错误码、DB/ENUM/流程或Flyway；`contract-change`不适用 |
+| 剩余 | 尚无登录取token闭环（R6-11）；未做人机浏览器点击测试 |

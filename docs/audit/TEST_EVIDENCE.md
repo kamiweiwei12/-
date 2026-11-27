@@ -708,3 +708,19 @@
 | 全量输出 | Flyway校验5个迁移、schema v5；`Tests run: 152, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:31 min`；`Finished at: 2026-11-28T00:56:40+08:00`；退出码0 |
 | 结论 | PASS：R6-12 配置错误在启动期失败，JWT错误issuer/角色/签名在真实HTTP边界稳定拒绝 |
 | 验证边界 | 未验证密钥轮换、外部密钥管理服务、登录限流或真实反向代理Origin；测试库未DROP/CREATE，本条不替代空库迁移证据 |
+
+## TE-20261128-03：OpenAPI Bearer JWT 与 Swagger UI
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 01:02–01:07 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `f288983` + 本轮工作区改动；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead18/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；springdoc-openapi 3.2.0；真实 PostgreSQL 16.16测试库，schema v5 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=WebContractIT' test` |
+| 定向输出 | 强化Swagger UI断言后的最终结果：`Tests run: 6, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 13.180 s`；退出码0 |
+| 文档断言 | `/v3/api-docs` 存在 `components.securitySchemes.bearerAuth`，`type=http`、`scheme=bearer`、`bearerFormat=JWT`；模拟支付POST引用该方案；公开健康GET没有security字段 |
+| UI断言 | 未携带JWT访问 `/swagger-ui/index.html` 返回200及HTML，证明文档入口保持公开并可提供Authorize输入 |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 5.541 s`；退出码0 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 153, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:16 min`；`Finished at: 2026-11-28T01:07:26+08:00`；退出码0 |
+| 结论 | PASS：Swagger UI与OpenAPI真实输出可表达现有JWT认证，且未把公开接口误标为全局认证 |
+| 验证边界 | 未进行浏览器人工点击Authorize；测试验证生成文档结构和UI页面可访问，不验证尚未实现的登录取token流程 |

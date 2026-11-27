@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
 import edu.sysu.snowfield.common.web.ApiResponse;
 import edu.sysu.snowfield.payment.application.PaymentApplicationService;
 import edu.sysu.snowfield.payment.application.PaymentResult;
@@ -29,6 +31,7 @@ public class PaymentController {
     }
 
     @PostMapping("/simulate")
+    @SecurityRequirement(name = "bearerAuth")
     public ApiResponse<PaymentResponse> simulate(
             @PathVariable long orderId,
             @RequestHeader("Idempotency-Key") @NotBlank String idempotencyKey,

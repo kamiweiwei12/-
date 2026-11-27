@@ -113,5 +113,32 @@ class WebContractIT {
         assertThat(doc.get("paths").has("/api/v1/health"))
                 .as("健康接口必须出现在 OpenAPI 文档中")
                 .isTrue();
+        JsonNode bearer = doc.get("components").get("securitySchemes").get("bearerAuth");
+        assertThat(bearer.get("type").asText()).isEqualTo("http");
+        assertThat(bearer.get("scheme").asText()).isEqualTo("bearer");
+        assertThat(bearer.get("bearerFormat").asText()).isEqualTo("JWT");
+
+        JsonNode paymentPost = doc.get("paths")
+                .get("/api/v1/orders/{orderId}/payments/simulate")
+                .get("post");
+        assertThat(paymentPost.get("security").get(0).has("bearerAuth"))
+                .as("受保护的模拟支付接口必须声明 Bearer 认证")
+                .isTrue();
+        assertThat(doc.get("paths").get("/api/v1/health").get("get").has("security"))
+                .as("公开健康接口不得被全局 Bearer 要求污染")
+                .isFalse();
+    }
+
+    @Test
+    void swaggerUiIsPubliclyServedForBearerAuthorization() {
+        ResponseEntity<String> response = client()
+                .get().uri("/swagger-ui/index.html")
+                .retrieve().toEntity(String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getContentType())
+                .isNotNull()
+                .satisfies(type -> assertThat(type.isCompatibleWith(MediaType.TEXT_HTML)).isTrue());
+        assertThat(response.getBody()).containsIgnoringCase("swagger ui");
     }
 }
