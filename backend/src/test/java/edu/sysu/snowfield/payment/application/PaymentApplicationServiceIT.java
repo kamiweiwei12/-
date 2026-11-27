@@ -21,6 +21,7 @@ import edu.sysu.snowfield.booking.application.CancelledOrder;
 import edu.sysu.snowfield.booking.application.CreateLodgingOrderCommand;
 import edu.sysu.snowfield.booking.application.CreatedLodgingOrder;
 import edu.sysu.snowfield.booking.application.OrderCancellationApplicationService;
+import edu.sysu.snowfield.booking.application.OrderExpiryApplicationService;
 import edu.sysu.snowfield.common.web.BusinessException;
 import edu.sysu.snowfield.common.web.ErrorCode;
 import edu.sysu.snowfield.support.AbstractPostgresIntegrationTest;
@@ -38,6 +39,9 @@ class PaymentApplicationServiceIT extends AbstractPostgresIntegrationTest {
 
     @Autowired
     private OrderCancellationApplicationService cancellationService;
+
+    @Autowired
+    private OrderExpiryApplicationService expiryService;
 
     private long userId;
     private long resourceUnitId;
@@ -325,6 +329,58 @@ class PaymentApplicationServiceIT extends AbstractPostgresIntegrationTest {
             CancelledOrder b = second.get(20, TimeUnit.SECONDS);
             assertThat(List.of(a.replayed(), b.replayed())).containsExactlyInAnyOrder(false, true);
         }
+        assertThat(scalar("SELECT count(*) FROM order_status_history WHERE order_id = " + order.orderId()))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation_status_history"))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void duePendingOrderExpiresAndReleasesLodgingWithHistories() throws SQLException {
+        CreatedLodgingOrder order = createOrder("create-expiry-due");
+        execute("UPDATE customer_order SET expires_at = now() - interval '1 second' WHERE order_id = "
+                + order.orderId());
+
+        int expired = expiryService.expireDueOrders();
+
+        assertThat(expired).isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM customer_order WHERE order_id = " + order.orderId()
+                + " AND status = 'EXPIRED' AND version = 1")).isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM order_item WHERE order_id = " + order.orderId()
+                + " AND status = 'EXPIRED'")).isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation WHERE occupancy_status = 'RELEASED'"))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM order_status_history WHERE to_status = 'EXPIRED'"))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM order_item_status_history WHERE to_status = 'EXPIRED'"))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation_status_history WHERE to_status = 'RELEASED'"))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void expiryScanIsIdempotentAndIgnoresNotDueOrConfirmedOrders() throws SQLException {
+        CreatedLodgingOrder notDue = createOrder("create-expiry-not-due");
+        paymentService.simulate(command(notDue.orderId(), "pay-before-expiry", "SUCCESS"));
+        execute("UPDATE customer_order SET expires_at = now() - interval '1 second' WHERE order_id = "
+                + notDue.orderId());
+
+        assertThat(expiryService.expireDueOrders()).isZero();
+        assertThat(expiryService.expireDueOrders()).isZero();
+        assertThat(scalar("SELECT count(*) FROM customer_order WHERE status = 'CONFIRMED'"))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM order_status_history WHERE to_status = 'EXPIRED'"))
+                .isZero();
+    }
+
+    @Test
+    void secondExpiryScanDoesNotDuplicateTransitions() throws SQLException {
+        CreatedLodgingOrder order = createOrder("create-expiry-replay");
+        execute("UPDATE customer_order SET expires_at = now() - interval '1 second' WHERE order_id = "
+                + order.orderId());
+        assertThat(expiryService.expireDueOrders()).isEqualTo(1);
+
+        assertThat(expiryService.expireDueOrders()).isZero();
         assertThat(scalar("SELECT count(*) FROM order_status_history WHERE order_id = " + order.orderId()))
                 .isEqualTo(1);
         assertThat(scalar("SELECT count(*) FROM lodging_reservation_status_history"))

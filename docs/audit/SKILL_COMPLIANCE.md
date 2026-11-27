@@ -195,3 +195,14 @@
 | contract-change | 未读取（本轮不适用） | 不适用：实现既有整单取消、REFUNDED及状态转换 | 未修改 DB/API/ENUM/业务流程条文或 Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-11
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：跨 booking/order/lodging 的定时事务功能 | 复用已恢复状态与候选状态机；限定过期扫描独立单元；执行测试、完整diff与文档闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向 PR #3 追加独立提交 | 仅暂存过期扫描单元；提交前完整 diff/`git diff --check`；不合并、不改设置、不代替 Review | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：过期事务、过滤与幂等释放验证 | 真实 PostgreSQL 定向19项、默认13项、全量133项；记录原始汇总、退出码及未实测多 JVM 边界 | APPLIED；TE-20261127-19 |
+| contract-change | 未读取（本轮不适用） | 不适用：实现既有 EXPIRED 状态转换与住宿释放 | 未修改 DB/API/ENUM/业务流程条文或 Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。

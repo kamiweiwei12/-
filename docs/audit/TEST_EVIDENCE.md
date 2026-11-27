@@ -648,3 +648,23 @@
 | 全量结果 | Flyway 成功校验5个迁移；`Tests run: 130, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:14 min`；`FULL_DB_EXIT_CODE=0` |
 | 结论 | PASS：整单取消、模拟退款、所有权、非法状态回滚及并发一次释放均有真实 PostgreSQL 证据 |
 | 验证边界 | 取消没有业务请求体，终态提供重放语义；当前仍要求 Idempotency-Key 非空但未新增契约外取消事件表；HTTP认证与过期扫描仍 NOT RUN |
+
+## TE-20261127-19：待支付订单过期扫描与幂等释放
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:33–23:37 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `48a5aba` + 本轮工作区改动 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；真实 PostgreSQL 16.16 测试库，schema v5 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=PaymentApplicationServiceIT' test` |
+| 定向结果 | `Tests run: 19, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 26.995 s`；`TARGET_EXIT_CODE=0` |
+| 到期断言 | 到期 `PENDING_PAYMENT` 订单转 `EXPIRED` 且版本递增；HELD 明细转 `EXPIRED`；住宿占用转 `RELEASED`；订单、明细、住宿三类历史各写一次 |
+| 幂等/过滤 | 第二次扫描返回0且不重复历史；即使 `expires_at` 已过，已支付 `CONFIRMED` 订单也不被扫描 |
+| 并发机制 | 每批最多100条，查询按订单号稳定排序并使用 `FOR UPDATE SKIP LOCKED`；与支付/取消的订单行锁互斥，多实例扫描跳过其他事务已领取行 |
+| 调度隔离 | 生产默认首次延迟/固定延迟均为60秒；测试 profile 把首次延迟设为3600000ms，集成测试直接调用服务，避免后台线程污染共享测试数据 |
+| 默认命令 | 在 `backend/` 执行 `.\mvnw.cmd -B test` |
+| 默认结果 | `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 7.593 s`；`DEFAULT_EXIT_CODE=0` |
+| 全量命令 | `.\mvnw.cmd -B -Pdb test` |
+| 全量结果 | Flyway 成功校验5个迁移；`Tests run: 133, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:19 min`；`Finished at: 2026-11-27T23:36:56+08:00`；`FULL_DB_EXIT_CODE=0` |
+| 结论 | PASS：待支付订单过期、状态历史、住宿释放、重复扫描幂等及非待支付过滤均有真实 PostgreSQL 证据 |
+| 验证边界 | 未实际等待墙钟触发调度，测试直接调用同一事务方法；未做多 JVM 实例竞争实测；测试库未 DROP/CREATE；HTTP/认证仍 NOT RUN |
