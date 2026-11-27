@@ -396,3 +396,42 @@ ALTER TABLE lodging_reservation
 2. `LodgingConcurrencyIT.concurrentBookingsOnDisjointPeriodsAllSucceed`：测试用 `1 + i*3` 手算日期，生成 `2027-03-33` 越界。改用 `LocalDate.plusDays`（TE-20261127-09）。
 
 两次均为**测试自身缺陷**，不是产品代码缺陷；均已修复并复测通过，失败记录保留未删除。
+
+## OP-20261127-04：BK-02 第一阶段——创建住宿订单事务编排
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 12:23–12:50 +08:00（Asia/Shanghai） |
+| 任务 | 按用户「按照建议继续」执行 BK-02 第一部分：创建订单 + 占用 + 幂等（应用层事务） |
+| 分支 | `feature/database-core`，开始 HEAD `ee3606b`，ahead origin/develop 9、behind 0；`origin/develop` 仍为 `3404221` |
+| 用户授权 | 同意按建议继续 BK-02，允许分两次交付 |
+| 修改/新增文件 | 新增 `catalog/{application,infrastructure/persistence}`、`pricing/{domain,application,infrastructure/persistence}`、`lodging/{application,infrastructure/persistence}`、`order/{application,infrastructure/persistence}`、`booking/application` 共 12 个类；修改 `common/web/BusinessException.java`（新增带 details 的构造）；新增 `BookingApplicationServiceIT` |
+| 操作 | 按 ARCHITECTURE.md §1 四层与 §2.1 依赖图建模块；`BookingApplicationService` 作为唯一 `@Transactional` 边界；空库重建后全量测试 |
+| Skill | `project-governance`、`git-pr`、`test-evidence` 应用；`contract-change` **不适用**：未改契约条文，只是实现既有契约行为 |
+| 测试 | `mvn -B -Pdb test`（空库）→ 101 测试全绿，退出码 0；`BookingApplicationServiceIT` 12 用例；默认构建 14 测试；开发库 0 表；ArchUnit 8 规则全绿 |
+| 结果 | 创建住宿订单的完整事务路径可用：价格服务端重算、幂等、原子创建、冲突整单回滚 |
+| 风险 | ① 未接 HTTP 层（需 Spring Security，S4）；② 只覆盖住宿，套餐/滑雪/装备待 B 侧表；③ 订单号生成器为单进程方案 |
+
+### 架构落地说明
+
+严格按 `docs/ARCHITECTURE.md` §2.1 依赖图实现，`BookingApplicationService` 是**唯一开启跨模块事务的地方**（ADR-009）：
+
+```
+booking/application/BookingApplicationService  (@Transactional)
+  ├─► catalog/application/CatalogQueryPort          ← ResourceSnapshot
+  ├─► pricing/application/PricingQueryPort          ← PriceCalculator.Rule
+  ├─► order/application/OrderWritePort              ← 写订单/明细/快照
+  └─► lodging/application/LodgingReservationPort    ← 写占用
+```
+
+- 模块间只经 `application` 层端口协作，不跨模块访问 Mapper（R10）。
+- `pricing/domain/PriceCalculator` 是纯领域类，不依赖 Spring/MyBatis/DB（R9）。
+- 住宿冲突不继承 `BusinessException`，由 booking 编排层翻译为 `BOOKING_CONFLICT`，使 `lodging` 模块不依赖 `common.web` 协议层。
+
+### 发现并修复的产品代码缺陷
+
+`CreateLodgingOrderCommand.fingerprint()` 原先拼接原始字符串，两间房的指纹超出 `customer_order.create_request_fingerprint varchar(128)`，导致多间房下单失败（TE-20261127-11 首次失败）。改为 SHA-256 定长摘要，同时保留行序排序语义。这是**本轮自己引入并自己发现的缺陷**，不是既有代码问题。
+
+### 关于未接 HTTP 层
+
+契约要求「创建订单必须登录」，而 Spring Security/JWT 属 S4 范围（`ARCHITECTURE.md` 版本矩阵）。本轮**只实现并验证 application 层事务**，不暴露 `POST /orders` 端点，避免产生一个无认证的订单创建入口。这是有意的顺序选择，已在 TE-20261127-12 标注。

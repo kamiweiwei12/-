@@ -483,3 +483,43 @@
 | 可用性查询与维修/开放规则联动 | NOT RUN | BK-01 未实现 |
 | 200+ 并发压力（JMeter） | NOT RUN | PERF-01，需真实业务接口 |
 | 开发库迁移 | NOT RUN | 刻意只迁测试库 |
+
+## TE-20261127-11：BK-02 第一阶段——创建住宿订单事务编排
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 12:23–12:46 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `ee3606b` + 本轮工作区改动 |
+| 环境 | Windows；JDK 21.0.12；Maven 3.9.16；`snowfield-db`（PostgreSQL 16.16, 5433）；测试库**先 DROP 再 CREATE** |
+| 命令 | `mvn -B -Pdb test -Dtest=BookingApplicationServiceIT`；`mvn -B -Pdb test`；`mvn -B test` |
+| 输出摘要 | `Successfully applied 5 migrations`；`BookingApplicationServiceIT`：`Tests run: 12, Failures: 0, Errors: 0`；全量 `Tests run: 101, Failures: 0, Errors: 0, Skipped: 0`；默认构建 `Tests run: 14`；`BUILD SUCCESS` |
+| 退出码 | 0 |
+| 隔离性 | 开发库 `snowfield` 表数 = `0` |
+| 覆盖内容 | ① 单间住宿：建订单 + 1 明细 + 2 个服务日快照 + 1 条 HELD 占用，金额 `1280×2=2560.00`；② **多间房生成独立订单项与独立占用**（契约：每间房数量为 1）；③ **幂等重放**返回原订单不新建；④ **同键不同请求** → `IDEMPOTENCY_CONFLICT`；⑤ **重叠冲突整单回滚**——B 房已成功占用也要撤销，不留孤儿订单/明细/占用；⑥ `expectedTotal` 不匹配 → `PRICE_CHANGED` 且不建单；⑦ 同优先级两条规则 → `PRICE_RULE_CONFLICT`（不静默选胜者）；⑧ 高优先级规则胜出（`1280×1.5×2=3840.00`）；⑨ 起止倒置 → `INVALID_TIME_RANGE`；⑩ 不存在资源 → `RESOURCE_NOT_FOUND`；⑪ 超容量 → `VALIDATION_FAILED` |
+| 结论 | PASS：契约「混合购物车在单个事务内原子创建」与「价格服务端权威」两条核心要求均有可执行证据 |
+
+### 首次失败（保留）
+
+| 项 | 内容 |
+|---|---|
+| 现象 | `Tests run: 12, Failures: 1, Errors: 1`：`overlappingReservationRollsBackWholeOrder`、`multipleRoomsProduceSeparateItemsAndReservations` |
+| 报错 | `DataIntegrityViolationException: value too long for type character varying(128)`，位于 `OrderMapper.insertOrder` |
+| 根因 | **产品代码缺陷**：`CreateLodgingOrderCommand.fingerprint()` 把各住宿行原始拼接成字符串，两间房的指纹超过 `customer_order.create_request_fingerprint varchar(128)` 上限。两个测试失败同一根因 |
+| 修复 | 指纹改为 **SHA-256 十六进制摘要（定长 64 字符）**，并保持行序排序保证同一购物车不同顺序指纹一致 |
+| 复测 | `Tests run: 12, Failures: 0, Errors: 0`，两个用例同时转绿 |
+
+### 另一次编译期失败（保留）
+
+`CreateLodgingOrderCommand` 的两个辅助重载在 `command(key, line, null)` 处产生歧义（`null` 同时匹配 `String` 与 `LodgingLine`），编译失败。已把双行版本重命名为 `twoLineCommand`。
+
+## TE-20261127-12：BK-02 本轮未覆盖范围
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| 模拟支付 `POST /orders/{id}/payments/simulate` | NOT RUN | BK-02 第二阶段 |
+| 取消订单 `POST /orders/{id}/cancel` | NOT RUN | BK-02 第二阶段 |
+| 过期扫描（15 分钟释放） | NOT RUN | 需要定时任务，BK-02 第二阶段 |
+| 订单/明细状态历史写入 | NOT RUN | 状态流转随支付与取消一并实现 |
+| HTTP 层下单接口 `POST /orders` | NOT RUN | 需先接 Spring Security（创建订单要求认证，S4）；本轮只验证 application 层事务 |
+| 套餐、滑雪、缆车、装备混购 | NOT RUN | 依赖 B 侧模块表与 `package_component` |
+| 容量资源（ski_session/lift_slot 行锁） | NOT RUN | SKI-01/LIFT-01 |
