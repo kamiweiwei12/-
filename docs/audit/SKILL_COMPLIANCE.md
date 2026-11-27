@@ -151,3 +151,14 @@
 | contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：实现并验证候选契约既有规则，未修改 DB/API/ENUM/流程条文 | 未新增表、迁移、枚举、端点或状态；公共契约仍保持 `v1.0-rc` | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-07
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：跨 catalog/booking 的数据库业务校验 | 恢复 Git/任务板/开发日志/契约；限定不改迁移和契约；执行测试、完整 diff 与文档闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：继续向已有 PR #3 提交 | 只暂存本轮文件；提交前执行完整 diff 与 `git diff --check`；不合并、不改设置、不代替 Review | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：维修正反例与全量回归 | 记录22/22、13/13、112/112及退出码0；明确非空库及未运行边界 | APPLIED；TE-20261127-15 |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：只实现候选契约已有维修状态/区间语义 | 未修改 DB/API/ENUM/流程；开放规则歧义登记 R6-08 并停止对应实现 | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。

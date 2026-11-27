@@ -464,3 +464,17 @@ booking/application/BookingApplicationService  (@Transactional)
 | 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志 |
 | 契约/迁移 | 无契约语义变更；无 Flyway 变更；`contract-change` 不适用 |
 | 剩余 | BK-01 可用性/维修/开放规则；BK-02 支付/取消/过期/状态历史；认证/HTTP；前端 |
+
+## OP-20261127-07：BK-01 维修区间联动
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 22:40–22:47 +08:00（Asia/Taipei） |
+| 分类 | FIX + TEST + DB + GIT |
+| 用户授权 | Review 预计1–2天；继续完成不依赖 Review 的后续工作 |
+| 范围 | 在既有 V2 维修模型上接入创建订单校验；不改公共契约、迁移、枚举、端点或前端 |
+| 实施 | catalog 查询端口按资源和半开请求区间查询 `OPEN/IN_PROGRESS` 维修；booking 在任何订单写入前以 `RESOURCE_NOT_OPEN` 拒绝；完成/取消维修不阻断 |
+| 测试 | 定向22/22、默认13/13、完整PostgreSQL 112/112，全部退出码0；TE-20261127-15 |
+| 契约判断 | OVERNIGHT 开放规则校验粒度在候选契约中不明确，登记 R6-08，不擅自实现；`contract-change` 不适用 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志 |
+| 剩余 | BK-01 独立可用性查询/开放规则；BK-02 支付/取消/过期/状态历史；认证/HTTP；前端 |

@@ -3,9 +3,9 @@
 ## 当前仓库状态（2026-11-27 更新）
 
 - 公共契约仍是 `v1.0-rc`：PR #2 可合并但为 `REVIEW_REQUIRED`，0 review，等待 `Janovo2117`；尚不能称为正式冻结。
-- 后端 S1/S2 已完成；PR #3 在 `feature/database-core` 上相对 `origin/develop` 领先 10 个提交，同样等待 Review，尚未集成到 `develop`。
-- 数据库已实现 V1~V5（身份、营地/资源、价格、订单/模拟支付表、住宿占用）；真实 PostgreSQL `-Pdb` 回归 110 个测试通过（TE-20261127-14）。
-- BK-02 创建阶段已补齐并发幂等、重复资源防线、住宿模式校验与上海业务时区 DAY_PASS 计价；支付、取消、过期释放、状态历史、HTTP/认证入口仍未实现。BK-01 的可用性查询、维修/开放规则联动仍有缺口。
+- 后端 S1/S2 已完成；PR #3 在 `feature/database-core` 上继续累积不依赖 Review 的实现，同样等待 Review，尚未集成到 `develop`。
+- 数据库已实现 V1~V5（身份、营地/资源、价格、订单/模拟支付表、住宿占用）；真实 PostgreSQL `-Pdb` 回归 112 个测试通过（TE-20261127-15）。
+- BK-02 创建阶段已补齐并发幂等、重复资源防线、住宿模式校验与上海业务时区 DAY_PASS 计价；BK-01 已接入 `OPEN/IN_PROGRESS` 维修区间阻断。支付、取消、过期释放、状态历史、HTTP/认证入口仍未实现；独立可用性查询和开放规则语义仍有缺口。
 - 前端工程尚未创建。
 - 默认测试已恢复为无数据库构建：13 个单元/架构测试通过；数据库上下文门禁改为 `SnowfieldApplicationIT`，仅在 `-Pdb` 运行（TE-20261127-14）。
 
@@ -85,4 +85,4 @@ docker compose up -d db
 
 - A：建立 Spring Boot、Flyway/PostgreSQL、V1基础字典与用户权限、迁移测试。
 - B：建立 React/Vite/Ant Design、路由和 API client，依据契约实现登录/错误状态骨架。
-- 共同：由 `Janovo2117` 审查已同步D-001/D-002的 `CONTRACT_FREEZE v1.0-rc` 并留下真实PR Review；此前禁止工程初始化。
+- 共同：由 `Janovo2117` 审查已同步D-001/D-002的 `CONTRACT_FREEZE v1.0-rc` 并留下真实PR Review；等待期间只继续不改变候选契约语义的实现，正式集成仍需 Review。

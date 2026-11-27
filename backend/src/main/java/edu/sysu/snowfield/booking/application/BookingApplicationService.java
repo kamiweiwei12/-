@@ -122,6 +122,11 @@ public class BookingApplicationService {
                 throw new BusinessException(ErrorCode.RESOURCE_NOT_OPEN,
                         "该资源类型不支持住宿模式：" + line.stayMode());
             }
+            if (catalogQuery.hasActiveMaintenanceOverlap(
+                    line.resourceUnitId(), line.startAt(), line.endAt())) {
+                throw new BusinessException(ErrorCode.RESOURCE_NOT_OPEN,
+                        "所选资源在请求时段内处于维修状态：" + line.resourceUnitId());
+            }
             if (line.guestCount() <= 0) {
                 throw new BusinessException(ErrorCode.VALIDATION_FAILED, "入住人数必须大于 0");
             }

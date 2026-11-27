@@ -384,6 +384,41 @@ class BookingApplicationServiceIT extends AbstractPostgresIntegrationTest {
                         .isEqualTo(ErrorCode.VALIDATION_FAILED));
     }
 
+    @Test
+    void activeMaintenanceOverlapRejectsOrderWithoutResidue() throws SQLException {
+        execute("""
+                INSERT INTO resource_maintenance (resource_unit_id, period, status, reason)
+                VALUES (%d, tstzrange('2027-09-11T00:00+08', '2027-09-13T00:00+08', '[)'),
+                        'IN_PROGRESS', '屋顶维修')
+                """.formatted(cabinA));
+        var command = command("idem-maintenance-blocked",
+                line(cabinA, "2027-09-10T15:00+08", "2027-09-12T12:00+08"), null);
+
+        assertThatThrownBy(() -> bookingService.createLodgingOrder(command))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.RESOURCE_NOT_OPEN));
+        assertThat(scalar("SELECT count(*) FROM customer_order")).isZero();
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation")).isZero();
+    }
+
+    @Test
+    void completedAndCancelledMaintenanceDoNotBlockOrder() throws SQLException {
+        execute("""
+                INSERT INTO resource_maintenance (resource_unit_id, period, status, reason)
+                VALUES
+                  (%d, tstzrange('2027-10-10T00:00+08', '2027-10-13T00:00+08', '[)'), 'COMPLETED', '已完成'),
+                  (%d, tstzrange('2027-10-10T00:00+08', '2027-10-13T00:00+08', '[)'), 'CANCELLED', '已取消')
+                """.formatted(cabinA, cabinA));
+        var command = command("idem-maintenance-finished",
+                line(cabinA, "2027-10-10T15:00+08", "2027-10-12T12:00+08"), null);
+
+        CreatedLodgingOrder created = bookingService.createLodgingOrder(command);
+
+        assertThat(created.replayed()).isFalse();
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation")).isEqualTo(1);
+    }
+
     // ---- 辅助 ----
 
     private void insertRule(String ruleType, String operation, String value, int priority) throws SQLException {

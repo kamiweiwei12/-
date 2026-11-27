@@ -1,6 +1,7 @@
 package edu.sysu.snowfield.catalog.infrastructure.persistence;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 import org.apache.ibatis.annotations.Mapper;
@@ -39,6 +40,18 @@ public interface ResourceUnitMapper {
             """)
     long countStayModeSupport(@Param("resourceTypeId") long resourceTypeId,
                               @Param("stayMode") String stayMode);
+
+    /** 有效维修（OPEN/IN_PROGRESS）与请求半开区间重叠的记录数。 */
+    @Select("""
+            SELECT count(*)
+            FROM resource_maintenance
+            WHERE resource_unit_id = #{resourceUnitId}
+              AND status IN ('OPEN', 'IN_PROGRESS')
+              AND period && tstzrange(#{startAt}, #{endAt}, '[)')
+            """)
+    long countActiveMaintenanceOverlap(@Param("resourceUnitId") long resourceUnitId,
+                                       @Param("startAt") OffsetDateTime startAt,
+                                       @Param("endAt") OffsetDateTime endAt);
 
     /** MyBatis 行记录，仅本模块内部使用。 */
     record ResourceUnitRow(

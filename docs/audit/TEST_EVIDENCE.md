@@ -567,3 +567,20 @@
 | 其他边界 | 同一请求非重叠重复资源被拒；空幂等键、人数0均返回 `VALIDATION_FAILED`，不依赖数据库异常 |
 | 结论 | PASS：R6-02~R6-05、R6-07 的修复均有真实可执行证据；公共契约状态仍为候选，结论不等于人工Review |
 | 验证边界 | 本轮未 DROP/CREATE 测试库，不新增/修改 Flyway；维修/开放规则、支付、取消、过期释放、HTTP/认证仍 NOT RUN |
+
+## TE-20261127-15：创建订单维修区间联动
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 22:41–22:43 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `68efd91` + 本轮工作区改动 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；真实 PostgreSQL 16.16 测试库，schema 已在 v5 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb test -Dtest=BookingApplicationServiceIT` |
+| 定向结果 | `Tests run: 22, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；退出码0 |
+| 默认命令 | 在 `backend/` 无数据库凭据执行 `.\mvnw.cmd -B test` |
+| 默认结果 | `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；退出码0 |
+| 完整命令 | `.\mvnw.cmd -B -Pdb test` |
+| 完整结果 | Flyway 成功校验5个迁移；`Tests run: 112, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；退出码0 |
+| 维修断言 | 与请求 `[startAt,endAt)` 重叠的 `IN_PROGRESS` 维修返回 `RESOURCE_NOT_OPEN`，且订单/占用均无残留；重叠的 `COMPLETED`、`CANCELLED` 不阻断创建 |
+| 结论 | PASS：创建住宿订单已接入有效维修区间阻断；未改变公共契约或 Flyway |
+| 验证边界 | 本轮未重建测试库；独立可用性查询、开放规则、支付、取消、过期释放、HTTP/认证仍 NOT RUN；开放规则语义见 R6-08 |

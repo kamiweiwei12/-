@@ -1,5 +1,6 @@
 package edu.sysu.snowfield.catalog.infrastructure.persistence;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -44,6 +45,13 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
             return false;
         }
         return resourceUnitMapper.countStayModeSupport(resourceTypeId, stayMode) > 0;
+    }
+
+    @Override
+    public boolean hasActiveMaintenanceOverlap(long resourceUnitId,
+                                               OffsetDateTime startAt,
+                                               OffsetDateTime endAt) {
+        return resourceUnitMapper.countActiveMaintenanceOverlap(resourceUnitId, startAt, endAt) > 0;
     }
 
     private static boolean isSellable(String status) {

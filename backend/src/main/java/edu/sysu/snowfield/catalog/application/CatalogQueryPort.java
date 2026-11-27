@@ -1,5 +1,6 @@
 package edu.sysu.snowfield.catalog.application;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 /**
@@ -12,4 +13,9 @@ public interface CatalogQueryPort {
 
     /** 校验资源类型是否支持请求的住宿模式。 */
     boolean supportsStayMode(long resourceTypeId, String stayMode);
+
+    /** 请求区间是否与 OPEN/IN_PROGRESS 维修记录重叠。 */
+    boolean hasActiveMaintenanceOverlap(long resourceUnitId,
+                                        OffsetDateTime startAt,
+                                        OffsetDateTime endAt);
 }

@@ -29,5 +29,6 @@
 | R6-05 | MEDIUM | POM/开发文档宣称默认 `mvn test` 不连数据库，但 `SnowfieldApplicationTests` 激活 `test` profile 并启动 Flyway；无凭据时默认构建失败 | 数据库上下文门禁重命名为 `SnowfieldApplicationIT`，仅 `-Pdb` 纳入；同步 Windows 命令 | 测试类、开发文档 | 新成员和 CI 无数据库时无法执行默认构建，现有文档误导 | 无凭据默认测试13/13；TE-20261127-14 | A | REMEDIATED_PENDING_REVIEW |
 | R6-06 | MEDIUM | `DEVELOPMENT.md` 与 `CHANGELOG` Known limitations 仍停留在 S2/仅 V1/无并发结果，落后于当前 V1~V5 与 101 测试事实 | 本轮同步当前阶段，但保留“未形成完整业务闭环”的边界 | 进度文档、Changelog | 交接时可能误判进度或重复工作 | 与任务板、Git log、TE-20261127-13 对照 | A | REMEDIATED_DOCS；代码缺口仍 OPEN |
 | R6-07 | HIGH | 契约要求同一创建请求不得重复 `resource_unit_id`，原实现只会在重叠区间时被排斥约束间接拒绝，非重叠重复资源可通过 | application 层在任何写入前对请求资源ID去重，并增加非重叠重复资源反例 | `BookingApplicationService`、BK-02 测试 | 一个购物车可能重复选择同一具体资源，违背多间房语义 | 集成测试 TE-20261127-14 | A | REMEDIATED_PENDING_REVIEW |
+| R6-08 | MEDIUM | 候选契约定义了 `resource_open_rule`，但未说明 OVERNIGHT 应校验入住时刻、完整住宿区间还是逐业务日窗口 | 由双方 Review 明确语义后，再同步流程/测试并实现；当前不猜测规则 | DB/API/业务流程、BK-01 | 擅自实现可能错误拒绝跨夜住宿或放过闭店时段 | 契约交叉审查；裁定后补边界集成测试 | 共同 | OPEN_FOR_REVIEW；维修联动已实现，开放规则暂缓 |
 
 关闭规则：`RESOLVED_IN_RC` 不是正式关闭；只有另一成员Review、适用测试及合并证据齐全后才可改为 `CLOSED`。
