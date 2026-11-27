@@ -16,8 +16,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import edu.sysu.snowfield.booking.application.BookingApplicationService;
+import edu.sysu.snowfield.booking.application.CancelOrderCommand;
+import edu.sysu.snowfield.booking.application.CancelledOrder;
 import edu.sysu.snowfield.booking.application.CreateLodgingOrderCommand;
 import edu.sysu.snowfield.booking.application.CreatedLodgingOrder;
+import edu.sysu.snowfield.booking.application.OrderCancellationApplicationService;
 import edu.sysu.snowfield.common.web.BusinessException;
 import edu.sysu.snowfield.common.web.ErrorCode;
 import edu.sysu.snowfield.support.AbstractPostgresIntegrationTest;
@@ -32,6 +35,9 @@ class PaymentApplicationServiceIT extends AbstractPostgresIntegrationTest {
 
     @Autowired
     private PaymentApplicationService paymentService;
+
+    @Autowired
+    private OrderCancellationApplicationService cancellationService;
 
     private long userId;
     private long resourceUnitId;
@@ -208,12 +214,137 @@ class PaymentApplicationServiceIT extends AbstractPostgresIntegrationTest {
                 .isEqualTo(1);
     }
 
+    @Test
+    void pendingOrderCancellationReleasesHoldAndWritesHistories() throws SQLException {
+        CreatedLodgingOrder order = createOrder("create-cancel-pending");
+
+        CancelledOrder cancelled = cancellationService.cancel(
+                new CancelOrderCommand(order.orderId(), userId, "cancel-pending"));
+
+        assertThat(cancelled.status()).isEqualTo("CANCELLED");
+        assertThat(cancelled.refunded()).isFalse();
+        assertThat(cancelled.replayed()).isFalse();
+        assertThat(scalar("SELECT count(*) FROM customer_order WHERE order_id = " + order.orderId()
+                + " AND status = 'CANCELLED' AND version = 1")).isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM order_item WHERE order_id = " + order.orderId()
+                + " AND status = 'CANCELLED'")).isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation WHERE occupancy_status = 'RELEASED'"))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM order_status_history WHERE to_status = 'CANCELLED'"))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM order_item_status_history WHERE to_status = 'CANCELLED'"))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation_status_history WHERE to_status = 'RELEASED'"))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void paidOrderCancellationRefundsSuccessfulPayment() throws SQLException {
+        CreatedLodgingOrder order = createOrder("create-cancel-paid");
+        paymentService.simulate(command(order.orderId(), "pay-before-cancel", "SUCCESS"));
+
+        CancelledOrder cancelled = cancellationService.cancel(
+                new CancelOrderCommand(order.orderId(), userId, "cancel-paid"));
+
+        assertThat(cancelled.refunded()).isTrue();
+        assertThat(scalar("SELECT count(*) FROM payment WHERE order_id = " + order.orderId()
+                + " AND status = 'REFUNDED'")).isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM customer_order WHERE status = 'CANCELLED'"))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation WHERE occupancy_status = 'RELEASED'"))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM order_status_history WHERE order_id = " + order.orderId()))
+                .isEqualTo(2);
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation_status_history"))
+                .isEqualTo(2);
+    }
+
+    @Test
+    void repeatedCancellationReturnsSameTerminalResultWithoutDuplicateHistory() throws SQLException {
+        CreatedLodgingOrder order = createOrder("create-cancel-replay");
+        CancelOrderCommand command = new CancelOrderCommand(order.orderId(), userId, "cancel-replay");
+        cancellationService.cancel(command);
+
+        CancelledOrder replay = cancellationService.cancel(command);
+
+        assertThat(replay.replayed()).isTrue();
+        assertThat(replay.status()).isEqualTo("CANCELLED");
+        assertThat(scalar("SELECT count(*) FROM order_status_history WHERE order_id = " + order.orderId()))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation_status_history"))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void startedItemPreventsCancellationAndRollsBack() throws SQLException {
+        CreatedLodgingOrder order = createOrder("create-cancel-started");
+        paymentService.simulate(command(order.orderId(), "pay-before-start", "SUCCESS"));
+        execute("UPDATE order_item SET status = 'IN_USE' WHERE order_id = " + order.orderId());
+
+        assertThatThrownBy(() -> cancellationService.cancel(
+                new CancelOrderCommand(order.orderId(), userId, "cancel-started")))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.INVALID_STATE_TRANSITION));
+        assertThat(scalar("SELECT count(*) FROM payment WHERE status = 'SUCCEEDED'")).isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM customer_order WHERE status = 'CONFIRMED'"))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation WHERE occupancy_status = 'CONFIRMED'"))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void nonOwnerCannotCancelOrder() throws SQLException {
+        CreatedLodgingOrder order = createOrder("create-cancel-owner");
+        execute("INSERT INTO app_user (email, password_hash, display_name) VALUES ('cancel-other@example.com', 'x', '其他人')");
+        long otherUser = scalar("SELECT user_id FROM app_user WHERE email = 'cancel-other@example.com'");
+
+        assertThatThrownBy(() -> cancellationService.cancel(
+                new CancelOrderCommand(order.orderId(), otherUser, "cancel-other")))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.ORDER_NOT_FOUND));
+        assertThat(scalar("SELECT count(*) FROM customer_order WHERE status = 'PENDING_PAYMENT'"))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void concurrentCancellationWritesOneTransitionOnly() throws Exception {
+        CreatedLodgingOrder order = createOrder("create-cancel-concurrent");
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Future<CancelledOrder> first = executor.submit(() -> attemptCancel(
+                    new CancelOrderCommand(order.orderId(), userId, "cancel-a"), ready, start));
+            Future<CancelledOrder> second = executor.submit(() -> attemptCancel(
+                    new CancelOrderCommand(order.orderId(), userId, "cancel-b"), ready, start));
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            CancelledOrder a = first.get(20, TimeUnit.SECONDS);
+            CancelledOrder b = second.get(20, TimeUnit.SECONDS);
+            assertThat(List.of(a.replayed(), b.replayed())).containsExactlyInAnyOrder(false, true);
+        }
+        assertThat(scalar("SELECT count(*) FROM order_status_history WHERE order_id = " + order.orderId()))
+                .isEqualTo(1);
+        assertThat(scalar("SELECT count(*) FROM lodging_reservation_status_history"))
+                .isEqualTo(1);
+    }
+
     private PaymentResult attempt(SimulatePaymentCommand command,
                                   CountDownLatch ready,
                                   CountDownLatch start) throws Exception {
         ready.countDown();
         start.await(10, TimeUnit.SECONDS);
         return paymentService.simulate(command);
+    }
+
+    private CancelledOrder attemptCancel(CancelOrderCommand command,
+                                         CountDownLatch ready,
+                                         CountDownLatch start) throws Exception {
+        ready.countDown();
+        start.await(10, TimeUnit.SECONDS);
+        return cancellationService.cancel(command);
     }
 
     private CreatedLodgingOrder createOrder(String key) {

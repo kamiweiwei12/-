@@ -628,3 +628,23 @@
 | 全量结果 | Flyway 成功校验5个迁移；`Tests run: 124, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 53.785 s`；`FULL_DB_EXIT_CODE=0` |
 | 结论 | PASS：模拟支付 application 事务、对象所有权、幂等、状态同步及并发成功唯一均有真实 PostgreSQL 证据 |
 | 验证边界 | 未新增 HTTP 接口或认证；取消、退款、过期扫描仍 NOT RUN；测试库未 DROP/CREATE，本条不替代空库迁移证据 |
+
+## TE-20261127-18：整单取消、模拟退款与并发幂等释放
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:29–23:31 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `6ca8c05` + 本轮工作区改动 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；真实 PostgreSQL 16.16 测试库，schema v5 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=PaymentApplicationServiceIT' test` |
+| 定向结果 | `Tests run: 16, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 27.292 s`；`TARGET_EXIT_CODE=0` |
+| 待支付取消 | 订单 `PENDING_PAYMENT→CANCELLED`、明细 `HELD→CANCELLED`、住宿 `HELD→RELEASED`；三类历史各一条；无退款 |
+| 已支付取消 | 支付 `SUCCEEDED→REFUNDED`；订单/明细取消、住宿释放；支付与取消产生的两阶段历史均保留 |
+| 幂等/并发 | 重复取消返回终态且不重复写历史；两个不同键并发取消恰好一个执行、一个重放，订单及住宿历史各仅一条 |
+| 状态/权限 | 明细已 `IN_USE` 时返回 `INVALID_STATE_TRANSITION` 且成功支付、订单和占用保持原状；非所有者返回 `ORDER_NOT_FOUND` |
+| 默认命令 | `.\mvnw.cmd -B test` |
+| 默认结果 | `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`DEFAULT_EXIT_CODE=0` |
+| 全量命令 | `.\mvnw.cmd -B -Pdb test` |
+| 全量结果 | Flyway 成功校验5个迁移；`Tests run: 130, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:14 min`；`FULL_DB_EXIT_CODE=0` |
+| 结论 | PASS：整单取消、模拟退款、所有权、非法状态回滚及并发一次释放均有真实 PostgreSQL 证据 |
+| 验证边界 | 取消没有业务请求体，终态提供重放语义；当前仍要求 Idempotency-Key 非空但未新增契约外取消事件表；HTTP认证与过期扫描仍 NOT RUN |

@@ -13,6 +13,10 @@ public interface PaymentWritePort {
 
     long create(NewPayment payment);
 
+    int refundSucceededForOrder(long orderId);
+
+    boolean hasRefundedPayment(long orderId);
+
     record NewPayment(long orderId, String paymentNo, String status, BigDecimal amount,
                       String idempotencyKey, String requestFingerprint, OffsetDateTime paidAt) {
     }

@@ -510,3 +510,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志；无新增问题需写 ISSUES |
 | 契约/迁移 | 实现既有支付契约和状态机；未改 DB/API/ENUM/流程条文，`contract-change` 不适用 |
 | 剩余 | 取消/退款、过期释放、认证HTTP入口；开放规则 R6-08；前端 |
+
+## OP-20261127-10：BK-02 整单取消与模拟退款
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:27–23:35 +08:00（Asia/Taipei） |
+| 分类 | FEAT + TEST + DB + GIT |
+| 用户授权 | 模拟支付提交后继续 BK-02 后续工作 |
+| 范围 | booking 取消编排、order 取消端口、payment 退款、lodging 整单释放及 PostgreSQL IT；不改公共契约、Flyway、HTTP或认证 |
+| 实施 | 所有者订单 `FOR UPDATE`；仅 PENDING_PAYMENT/CONFIRMED 且无 IN_USE/FULFILLED 明细可取消；成功支付改 REFUNDED；状态与历史同事务同步 |
+| 幂等 | 取消无业务请求体；订单 CANCELLED 终态直接返回重放结果，仍要求非空 Idempotency-Key；并发取消由订单行锁串行且只写一次历史 |
+| 测试 | 定向16/16、默认13/13、完整PostgreSQL 130/130，全部0失败/0跳过/退出码0；TE-20261127-18 |
+| Diff 门禁 | 完整审查20个 staged 文件（含全部新文件）；`git diff --cached --check` 无空白错误、退出码0，仅有既有行尾提示 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志；无新增问题需写 ISSUES |
+| 契约/迁移 | 实现既有整单取消/退款状态机；未改 DB/API/ENUM/流程条文，`contract-change` 不适用 |
+| 剩余 | 过期释放、认证HTTP入口；开放规则 R6-08；前端 |

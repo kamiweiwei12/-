@@ -39,6 +39,16 @@ public class PaymentWriteAdapter implements PaymentWritePort {
         return params.paymentId;
     }
 
+    @Override
+    public int refundSucceededForOrder(long orderId) {
+        return mapper.refundSucceeded(orderId);
+    }
+
+    @Override
+    public boolean hasRefundedPayment(long orderId) {
+        return mapper.countRefunded(orderId) > 0;
+    }
+
     private static Optional<ExistingPayment> map(PaymentMapper.PaymentRow row) {
         if (row == null) {
             return Optional.empty();

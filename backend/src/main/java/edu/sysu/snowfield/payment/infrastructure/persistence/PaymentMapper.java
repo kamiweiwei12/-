@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface PaymentMapper {
@@ -36,6 +37,12 @@ public interface PaymentMapper {
             """)
     @Options(useGeneratedKeys = true, keyProperty = "paymentId", keyColumn = "payment_id")
     int insert(PaymentParams params);
+
+    @Update("UPDATE payment SET status = 'REFUNDED' WHERE order_id = #{orderId} AND status = 'SUCCEEDED'")
+    int refundSucceeded(@Param("orderId") long orderId);
+
+    @Select("SELECT count(*) FROM payment WHERE order_id = #{orderId} AND status = 'REFUNDED'")
+    long countRefunded(@Param("orderId") long orderId);
 
     class PaymentParams {
         public Long paymentId;

@@ -68,4 +68,25 @@ public interface LodgingReservationMapper {
               AND r.occupancy_status = 'HELD'
             """)
     int confirmForOrder(@Param("orderId") long orderId);
+
+    @Insert("""
+            INSERT INTO lodging_reservation_status_history
+                (reservation_id, from_status, to_status, reason)
+            SELECT r.reservation_id, r.occupancy_status, 'RELEASED', #{reason}
+            FROM lodging_reservation r
+            JOIN order_item i ON i.order_item_id = r.order_item_id
+            WHERE i.order_id = #{orderId}
+              AND r.occupancy_status IN ('HELD', 'CONFIRMED', 'IN_USE')
+            """)
+    int insertReleaseHistories(@Param("orderId") long orderId, @Param("reason") String reason);
+
+    @Update("""
+            UPDATE lodging_reservation r
+            SET occupancy_status = 'RELEASED', updated_at = now()
+            FROM order_item i
+            WHERE i.order_item_id = r.order_item_id
+              AND i.order_id = #{orderId}
+              AND r.occupancy_status IN ('HELD', 'CONFIRMED', 'IN_USE')
+            """)
+    int releaseForOrder(@Param("orderId") long orderId);
 }
