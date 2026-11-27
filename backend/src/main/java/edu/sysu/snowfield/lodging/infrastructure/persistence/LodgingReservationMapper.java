@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 
 /**
  * lodging 持久化：住宿占用写入。
@@ -47,4 +48,24 @@ public interface LodgingReservationMapper {
               AND occupancy_status IN ('HELD','CONFIRMED','IN_USE')
             """)
     int release(@Param("reservationId") long reservationId);
+
+    @Insert("""
+            INSERT INTO lodging_reservation_status_history
+                (reservation_id, from_status, to_status, reason)
+            SELECT r.reservation_id, r.occupancy_status, 'CONFIRMED', 'SIMULATED_PAYMENT_SUCCEEDED'
+            FROM lodging_reservation r
+            JOIN order_item i ON i.order_item_id = r.order_item_id
+            WHERE i.order_id = #{orderId} AND r.occupancy_status = 'HELD'
+            """)
+    int insertConfirmHistories(@Param("orderId") long orderId);
+
+    @Update("""
+            UPDATE lodging_reservation r
+            SET occupancy_status = 'CONFIRMED', updated_at = now()
+            FROM order_item i
+            WHERE i.order_item_id = r.order_item_id
+              AND i.order_id = #{orderId}
+              AND r.occupancy_status = 'HELD'
+            """)
+    int confirmForOrder(@Param("orderId") long orderId);
 }

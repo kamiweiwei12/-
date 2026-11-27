@@ -494,3 +494,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志 |
 | 契约/迁移 | 只补齐已有 `resource_unit.name` → `item_name_snapshot` 数据链路；无 DB/API/ENUM/业务流程条文变化，`contract-change` 不适用 |
 | 剩余 | R6-08 开放规则待 Review；BK-02 支付/取消/过期；认证/HTTP；前端 |
+
+## OP-20261127-09：BK-02 模拟支付事务
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:17–23:30 +08:00（Asia/Taipei） |
+| 分类 | FEAT + TEST + DB + GIT |
+| 用户授权 | 明确要求继续后续任务；本轮选取可独立验证的模拟支付工作单元 |
+| 范围 | payment application/persistence、order 支付端口、lodging 确认端口及真实 PostgreSQL IT；不改公共契约、Flyway、HTTP或认证 |
+| 实施 | `FOR UPDATE` 锁定所有者订单；订单内串行支付；同键指纹校验；成功/失败记录；成功时同步订单、明细、住宿占用和三类历史 |
+| 并发防线 | 应用订单行锁保证同订单串行；数据库 `uq_payment_succeeded_per_order` 保持最终兜底；并发不同键成功测试仅一条成功支付 |
+| 测试 | 定向10/10、默认13/13、完整PostgreSQL 124/124，全部0失败/0跳过/退出码0；TE-20261127-17 |
+| Diff 门禁 | 完整审查21个 staged 文件（含全部新文件）；`git diff --cached --check` 无空白错误、退出码0，仅有既有行尾提示 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志；无新增问题需写 ISSUES |
+| 契约/迁移 | 实现既有支付契约和状态机；未改 DB/API/ENUM/流程条文，`contract-change` 不适用 |
+| 剩余 | 取消/退款、过期释放、认证HTTP入口；开放规则 R6-08；前端 |

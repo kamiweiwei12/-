@@ -607,3 +607,24 @@
 | 报告目录终检 | surefire 仅含本次12个当前测试类报告；`DIAGNOSTIC_PROBE_FINAL=ABSENT`，`OLD_CONTEXT_REPORT_FINAL=ABSENT` |
 | 结论 | PASS：R6-09/R6-10 均有独立新增 IT 和 clean 后完整 PostgreSQL 回归证据；陈旧报告误导已消除 |
 | 验证边界 | 测试库未 DROP/CREATE；本条证明 clean 构建与当前 schema 回归，不替代既有空库迁移证据；支付/取消/过期、HTTP认证、开放规则仍 NOT RUN |
+
+## TE-20261127-17：模拟支付事务、幂等与并发成功唯一
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:23–23:25 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `24fdc40` + 本轮工作区改动 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；真实 PostgreSQL 16.16 测试库，schema v5 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=PaymentApplicationServiceIT' test` |
+| 定向结果 | `Tests run: 10, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 17.300 s`；`TARGET_EXIT_CODE=0` |
+| 成功路径 | 模拟成功写一条 `SUCCEEDED/SIMULATED` 支付，金额等于订单总额；订单 `PENDING_PAYMENT→CONFIRMED`、明细 `HELD→CONFIRMED`、住宿占用 `HELD→CONFIRMED`，三类历史各写一次，订单版本递增 |
+| 失败/重试 | `FAILURE` 写 `FAILED` 且订单/明细/占用保持待支付；使用新键可再次尝试并成功 |
+| 幂等 | 同键同结果返回原支付且不重复写；同键异结果返回 `IDEMPOTENCY_CONFLICT`；成功后使用新键也返回既有成功支付，不新增记录 |
+| 权限/过期 | 非订单所有者得到 `ORDER_NOT_FOUND` 且无支付残留；已过期待支付订单得到 `ORDER_EXPIRED` 且无支付残留 |
+| 并发 | 同一订单两个不同幂等键并发模拟成功：两个调用返回同一 paymentId，恰好一个 `replayed=false`、一个 `replayed=true`；数据库仅一条 `SUCCEEDED`，三类状态历史各一条 |
+| 默认命令 | `.\mvnw.cmd -B test` |
+| 默认结果 | `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`DEFAULT_EXIT_CODE=0` |
+| 全量命令 | `.\mvnw.cmd -B -Pdb test` |
+| 全量结果 | Flyway 成功校验5个迁移；`Tests run: 124, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 53.785 s`；`FULL_DB_EXIT_CODE=0` |
+| 结论 | PASS：模拟支付 application 事务、对象所有权、幂等、状态同步及并发成功唯一均有真实 PostgreSQL 证据 |
+| 验证边界 | 未新增 HTTP 接口或认证；取消、退款、过期扫描仍 NOT RUN；测试库未 DROP/CREATE，本条不替代空库迁移证据 |
