@@ -36,6 +36,9 @@
 - 接入 `springdoc-openapi 3.2.0`（父 POM 为 Boot 4.1.2，与项目 4.1.3 同代），暴露 `/v3/api-docs` 与 Swagger UI。
 - 新增 `V4__order_and_payment.sql`：`package_offer`/`customer_order`/`order_package`/`order_item`/`order_status_history`/`order_item_status_history`/`payment`/`price_snapshot_line` 八表；含创建幂等键 `(user_id,key)` 与支付幂等键 `(order_id,key)` 作用域约束、`uq_payment_succeeded_per_order` 部分唯一索引（一单至多一条成功支付）、`method` 恒为 `SIMULATED` 的 CHECK。
 - 新增 `OrderAndPaymentConstraintIT`：20 个订单/支付/套餐/快照约束测试。
+- 新增 `V5__lodging_reservation.sql`：`lodging_reservation` 与 `lodging_reservation_status_history`；落地契约核心的住宿时间排斥约束 `EXCLUDE USING gist (resource_unit_id WITH =, stay_period WITH &&) WHERE occupancy_status IN ('HELD','CONFIRMED','IN_USE')`，`RELEASED` 排除在谓词外。
+- 新增 `LodgingExclusionConstraintIT`：12 个排斥约束语义测试（重叠/包含/首尾相接/RELEASED 释放/跨资源/空区间/无界区间/非法状态/一单一占用/级联清除）。
+- 新增 `LodgingConcurrencyIT`：**100 并发抢 1 资源**真实验证（独立连接并发），成功 1 / 冲突 99 / 无残留；另有 20 个互不重叠并发窗口全部成功的反向验证。
 - 新增 `WebContractIT`：以 `RANDOM_PORT` 真实启动内嵌服务器，验证统一成功信封、错误信封、404→`RESOURCE_NOT_FOUND` 映射、错误响应不泄漏堆栈/SQL/内部包名、OpenAPI 文档可访问且含健康接口。
 
 ### Changed

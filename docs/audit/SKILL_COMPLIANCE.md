@@ -107,3 +107,14 @@
 | contract-change | `.agents/skills/contract-change/SKILL.md` | **不适用**：未修改契约条文 | 仅引用 `DATABASE_CONTRACT.md` §2 与 `ENUMS.md` 作为 DDL 依据；围绕未裁定的 D-005 决策在 PR #2 评论中说明下游影响，而未擅自改契约 | NOT APPLICABLE（契约条文无变更） |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-03
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：数据库迁移 + 并发测试 | 完整读取；启动检查（分支/HEAD/工作树/`git fetch` 后仍 0 behind/`origin/develop` 未变）；任务分类 `DB`+`TEST`；风险评估：迁移基于未冻结契约、并发测试稳定性；§13 闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：本轮提交与推送 | 完整读取；只暂存明确文件；`git diff --check`；未合并 PR、未改分支保护 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：迁移、约束、并发测试 | 完整读取；空库重建后全量执行；并发测试连跑 4 轮记录稳定性；两次失败（均为测试缺陷）保留并追加复测；TE-20261127-10 标注未覆盖范围与原因 | APPLIED |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | **不适用**：未修改契约条文 | 仅按 `DATABASE_CONTRACT.md` §2 的 `lodging_reservation` 定义与排斥谓词原文落地 DDL；`OccupancyStatus` 取值域直接取自 `ENUMS.md` | NOT APPLICABLE（契约条文无变更） |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。

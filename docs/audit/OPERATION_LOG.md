@@ -357,3 +357,42 @@ git diff --check
 ### 关于订单总额汇总的数据库层选择
 
 契约要求「住宿逐日合计以 `price_snapshot_line` 汇总并在服务层/过程校验」，且 ADR-009 规定跨模块事务由 `BookingApplicationService` 编排。若在数据库用跨表聚合触发器强制「订单总额 = Σ明细 − Σ优惠」，会与事务编排设计冲突且难以在并发下正确表达。因此 V4 只落地可独立验证的局部不变量，跨行汇总一致性明确留给 BK-02 应用层，并在 TEST_EVIDENCE TE-20261127-06 中标注 NOT RUN，不声称已完成。
+
+## OP-20261127-03：BK-03 住宿占用迁移与一百并发抢订验证
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 11:44–12:00 +08:00（Asia/Shanghai） |
+| 任务 | 按用户「可以，做1」执行 BK-03：住宿占用表、排斥约束与 100 并发抢 1 资源测试同轮完成 |
+| 分支 | `feature/database-core`，开始 HEAD `3540d59`，ahead origin/develop 8、behind 0；`origin/develop` 仍为 `3404221` |
+| 用户授权 | 明确同意执行 BK-03 |
+| 修改/新增文件 | 新增 `V5__lodging_reservation.sql`、`LodgingExclusionConstraintIT.java`、`LodgingConcurrencyIT.java`；审计与日志文件 |
+| 操作 | 按契约 §2 建 `lodging_reservation` 与 `EXCLUDE USING gist` 约束；空库重建后 V1→V5 全量执行；写 12 个约束语义测试 + 3 个并发测试；并发测试连跑 3 轮稳定性复测 |
+| Skill | `project-governance`、`git-pr`、`test-evidence` 应用；`contract-change` **不适用**：V5 是既有契约结构的 DDL 落地，未改任何契约条文 |
+| 测试 | `mvn -B -Pdb test`（空库）→ 89 测试全绿，退出码 0；`LodgingConcurrencyIT` 4 轮全绿（100 并发 → 成功 1 / 冲突 99 / 残留 1）；`mvn -B test` → 14 测试全绿 |
+| 结果 | 排斥约束落地并经反例与并发双重验证；BK-03 验收标准达成 |
+| 风险 | ① 迁移基于未冻结契约；② 只验证数据库层，应用层状态流转与事务同步未实现；③ 并发测试耗时约 12 s，随测试量增长需关注 |
+
+### 排斥约束的实现要点
+
+```sql
+ALTER TABLE lodging_reservation
+    ADD CONSTRAINT ex_lodging_reservation_no_overlap
+    EXCLUDE USING gist (resource_unit_id WITH =, stay_period WITH &&)
+    WHERE (occupancy_status IN ('HELD', 'CONFIRMED', 'IN_USE'));
+```
+
+- 依赖 `btree_gist` 扩展（已在 V2 中 `CREATE EXTENSION IF NOT EXISTS btree_gist` 创建）。
+- `RELEASED` 被排除在谓词外：这是契约强调的关键点，否则已取消/过期订单会永久阻塞同一资源。测试 `releasedReservationDoesNotBlockResource` 与 `releasedIsTerminalAndNoLongerExcluded` 直接验证了这一点。
+- 半开区间 `[start, end)` 语义由测试 `adjacentReservationsAreAllowed` 验证：26 日 12:00 退房、同日 12:00 入住不判为重叠。
+
+### 关于「订单状态与占用状态同事务同步」
+
+契约要求两者同事务维护，并明确「不得由两个任意入口各自维护」。本轮**未**用数据库触发器强制双写，理由：ADR-009 规定跨模块事务由 `BookingApplicationService` 统一编排，用触发器复制业务规则会与 Java 侧逻辑重复并难以在并发下正确表达（AGENTS.md §9 禁止「在 Java 与数据库函数重复实现同一套业务规则」）。该项留待 BK-02 在应用层实现，已在 TE-20261127-10 标注 NOT RUN。
+
+### 首次失败两次（均保留）
+
+1. `LodgingExclusionConstraintIT.emptyPeriodIsRejected`：断言绑定了 `period_nonempty`，实际 PostgreSQL 先触发 `period_bounded`。约束行为正确，测试断言过窄，已改为断言约束名前缀并补 `unboundedPeriodIsRejected`（TE-20261127-08）。
+2. `LodgingConcurrencyIT.concurrentBookingsOnDisjointPeriodsAllSucceed`：测试用 `1 + i*3` 手算日期，生成 `2027-03-33` 越界。改用 `LocalDate.plusDays`（TE-20261127-09）。
+
+两次均为**测试自身缺陷**，不是产品代码缺陷；均已修复并复测通过，失败记录保留未删除。
