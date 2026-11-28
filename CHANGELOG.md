@@ -58,6 +58,7 @@
 - `WebContractIT` 增加 HSTS secure/HTTP 对照：实际 `SecurityFilterChain` 对安全请求写入一年 `max-age` 与 `includeSubDomains`，普通 HTTP 不写入；部署文档明确反向代理必须在信任边界清洗转发头。
 - 支付幂等键在 application 层按既有 PostgreSQL `varchar(128)` 字符语义提前校验：128 个非 BMP Unicode 字符可入库，129 字符在任何写入前返回 `VALIDATION_FAILED`，避免数据库异常映射为 HTTP 500。
 - 统一异常处理补充不支持媒体类型映射：模拟支付收到 `text/plain` 时返回现有400 `VALIDATION_FAILED` 信封而非500；畸形JSON、缺失请求体和非法路径ID也新增真实HTTP零写入回归。
+- 模拟支付显式声明只消费/产生JSON：错误HTTP方法保留405并返回统一校验信封；`Accept: text/plain` 在进入Controller前返回无体406，避免支付已写入但客户端收到协商失败。
 - 新增 `V5__lodging_reservation.sql`：`lodging_reservation` 与 `lodging_reservation_status_history`；落地契约核心的住宿时间排斥约束 `EXCLUDE USING gist (resource_unit_id WITH =, stay_period WITH &&) WHERE occupancy_status IN ('HELD','CONFIRMED','IN_USE')`，`RELEASED` 排除在谓词外。
 - 新增 `LodgingExclusionConstraintIT`：12 个排斥约束语义测试（重叠/包含/首尾相接/RELEASED 释放/跨资源/空区间/无界区间/非法状态/一单一占用/级联清除）。
 - 新增 `LodgingConcurrencyIT`：**100 并发抢 1 资源**真实验证（独立连接并发），成功 1 / 冲突 99 / 无残留；另有 20 个互不重叠并发窗口全部成功的反向验证。
@@ -89,6 +90,6 @@
 ### Known limitations
 
 - React 前端工程尚未创建；JWT 校验和模拟支付 HTTP 已实现，但注册/登录、当前用户、创建/查询/取消订单 HTTP DTO 仍缺明确契约并等待 Review（R6-11），因此还没有可由用户登录进入的端到端住宿闭环。
-- V1~V5、BK-02 application 生命周期及支付 HTTP 已落地；2026-11-28 在现有 PostgreSQL 16 测试库执行 `mvn -B -Pdb test`，166 个测试通过（TE-20261128-07）。这不是空库迁移复测；独立可用性查询与开放规则仍未完成。
-- 默认 `mvn test` 为无数据库的 19 个单元/架构/安全配置测试；数据库上下文、迁移与业务集成只在显式 `-Pdb` 下运行。
+- V1~V5、BK-02 application 生命周期及支付 HTTP 已落地；2026-11-28 在现有 PostgreSQL 16 测试库执行 `mvn -B -Pdb test`，170 个测试通过（TE-20261128-08）。这不是空库迁移复测；独立可用性查询与开放规则仍未完成。
+- 默认 `mvn test` 为无数据库的 21 个单元/架构/安全配置测试；数据库上下文、迁移与业务集成只在显式 `-Pdb` 下运行。
 - 公共契约 PR #2 与实现 PR #3 均无 Review、无 CI 检查结果，不能视为正式冻结或已集成；住宿排斥约束已有 100 并发数据库层证据，但尚无真实 HTTP/JMeter 性能证据。

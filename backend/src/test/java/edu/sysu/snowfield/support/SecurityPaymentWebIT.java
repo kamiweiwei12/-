@@ -282,6 +282,37 @@ class SecurityPaymentWebIT {
     }
 
     @Test
+    void unsupportedHttpMethodReturnsContractErrorWithoutDatabaseWrite() throws SQLException {
+        assertError(() -> client().get()
+                        .uri("/api/v1/orders/{id}/payments/simulate", order.orderId())
+                        .header("Authorization", "Bearer " + token(userId, "CUSTOMER"))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .retrieve().toEntity(String.class),
+                HttpStatus.METHOD_NOT_ALLOWED, "VALIDATION_FAILED");
+        assertThat(scalar("SELECT count(*) FROM payment WHERE order_id = " + order.orderId())).isZero();
+    }
+
+    @Test
+    void unacceptableResponseTypeReturns406WithoutDatabaseWrite() throws SQLException {
+        assertThatThrownBy(() -> client().post()
+                        .uri("/api/v1/orders/{id}/payments/simulate", order.orderId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.TEXT_PLAIN)
+                        .header("Authorization", "Bearer " + token(userId, "CUSTOMER"))
+                        .header("Idempotency-Key", "pay-http-accept-boundary")
+                        .body("{\"desiredOutcome\":\"SUCCESS\"}")
+                        .retrieve().toEntity(String.class))
+                .isInstanceOf(HttpClientErrorException.class)
+                .satisfies(thrown -> {
+                    HttpClientErrorException ex = (HttpClientErrorException) thrown;
+                    assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_ACCEPTABLE);
+                    assertThat(ex.getResponseBodyAsString())
+                            .doesNotContain("Exception", "java.", "org.springframework", "SQL");
+                });
+        assertThat(scalar("SELECT count(*) FROM payment WHERE order_id = " + order.orderId())).isZero();
+    }
+
+    @Test
     void corsAllowsConfiguredFrontendAndRejectsUnknownOrigin() {
         ResponseEntity<String> allowed = client().options()
                 .uri("/api/v1/orders/{id}/payments/simulate", order.orderId())

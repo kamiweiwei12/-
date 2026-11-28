@@ -791,3 +791,20 @@
 | 边界断言 | 畸形JSON、缺失请求体、非法路径ID和`text/plain`均返回统一400 `VALIDATION_FAILED`，包含traceId且不泄漏内部信息；四类请求后payment均为0 |
 | 结论 | PASS：不支持的媒体类型不再落入500；既有其他协议异常路径保持稳定400，完整回归未受影响；两次失败均如实保留 |
 | 验证边界 | 仅验证现有模拟支付端点；未设置全局请求体字节上限、频率限制或代理限制，这些仍NOT RUN；未修改公开API、错误码集合、数据库或Flyway |
+
+## TE-20261128-08：支付 HTTP 方法与内容协商前置门禁
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 19:42–19:47 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `32d7f1e` + 本轮工作区改动；启动时工作树干净；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead23/behind0；PR #3 OPEN/REVIEW_REQUIRED、0 review、0 checks |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3/Tomcat 11.0.27；真实 PostgreSQL 16.16测试库，Flyway schema v5 |
+| 修复前命令 | `.\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT' test` |
+| 修复前结果 | `Tests run: 22, Failures: 2, Errors: 0, Skipped: 0`；GET错误方法实际500 `INTERNAL_ERROR`；`Accept: text/plain` 返回406但无法产生JSON信封；`BUILD FAILURE`；`Total time: 30.330 s`；退出码1 |
+| 过渡复测 | `.\mvnw.cmd -B -Pdb '-Dtest=GlobalExceptionHandlerTest,SecurityPaymentWebIT' test`；405映射修复后，406场景进一步证明响应失败时payment计数已为1而非0；总计27项、1失败；`BUILD FAILURE`；`Total time: 29.229 s`；退出码1 |
+| 最终定向结果 | 同一组合命令；handler 6/6、真实HTTP 22/22，总计28/28，0失败/0错误/0跳过；`BUILD SUCCESS`；`Total time: 28.934 s`；`Finished at: 2026-11-28T19:45:12+08:00`；退出码0 |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；最终复测 `Tests run: 21, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 16.026 s`；`Finished at: 2026-11-28T19:49:26+08:00`；退出码0 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 170, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:39 min`；`Finished at: 2026-11-28T19:47:17+08:00`；退出码0 |
+| 边界断言 | GET支付路径在Controller前返回405及`VALIDATION_FAILED`信封；不接受JSON的POST在Controller前返回无体406；两者payment均为0且无内部信息泄漏 |
+| 结论 | PASS：HTTP方法/内容协商错误不再误报500或在失败响应前产生支付副作用；两轮失败均保留 |
+| 验证边界 | 406无JSON信封是因为客户端明确拒绝`application/json`；服务端不违背Accept强行返回JSON。未测试代理层内容协商改写、请求大小或限流 |

@@ -654,3 +654,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 提交门禁 | 完整审查12个暂存文件（161新增/6删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
 | 契约/迁移 | 复用既有`VALIDATION_FAILED`，未新增状态/字段/错误码或修改DB/ENUM/流程/Flyway；`contract-change`不适用 |
 | 剩余 | 全局请求体字节上限、频率限制及反向代理限制仍NOT RUN；R6-08/R6-11继续等待Review |
+
+## OP-20261128-08：支付 HTTP 方法与内容协商前置门禁
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 19:40–19:49 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + FIX + TEST + DOC + GIT |
+| 用户授权 | 同意继续上一轮建议的HTTP方法与Accept协商边界 |
+| 启动状态 | `feature/database-core` / `32d7f1e`；工作树干净；fetch后功能分支0/0、相对develop ahead23/behind0；PR #3为OPEN/REVIEW_REQUIRED、0 review、0 checks |
+| 范围 | 现有模拟支付端点的错误方法和Accept内容协商；不新增端点/错误码，不改业务DTO、数据库/Flyway、认证或前端 |
+| 实施 | GET错误方法映射为标准405+既有校验信封；支付POST显式JSON consumes/produces，使不接受JSON的请求在Controller前无体406；单元与真实HTTP均覆盖零写入 |
+| 测试 | 修复前22项2失败；过渡复测27项1失败并暴露406后payment=1；最终定向28/28、默认21/21、全量PostgreSQL170/170，最终均退出码0；TE-20261128-08 |
+| 发现 | R6-16：响应内容协商发生在支付写入后，形成“客户端失败、数据库成功”；已通过映射条件前置修复。406无JSON体是Accept语义，不伪装统一信封 |
+| 提交门禁 | 完整审查13个暂存文件（168新增/7删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
+| 契约/迁移 | 只显式落实契约既有JSON媒体类型与POST方法；复用`VALIDATION_FAILED`，未新增公开字段/路径/状态或修改DB/ENUM/流程/Flyway；`contract-change`不适用 |
+| 剩余 | 请求大小、速率限制与代理改写仍NOT RUN；R6-08/R6-11继续等待Review |

@@ -283,3 +283,14 @@
 | contract-change | 未读取（本轮不适用） | 不适用：错误媒体类型复用现有400 `VALIDATION_FAILED`，未改变公开错误码集合或业务语义 | 未修改API/DB/ENUM/流程契约或Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-08
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：HTTP方法/协商一致性修复、测试、文档与Git闭环 | 恢复Git/远端/PR/任务板/日志/API；测试先行并保留两轮失败；限定只显式落实既有POST+JSON事实 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：真实HTTP状态、数据库副作用、单元及全量回归 | 记录修复前2失败、过渡payment=1失败、最终定向28、默认21、全量170及退出码/验证边界 | APPLIED；TE-20261128-08 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立修复提交 | fetch确认0 behind；核验PR仍待Review且无checks；仅暂存本单元并执行完整diff/敏感信息/空白门禁；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：显式声明契约已有POST与`application/json`，未新增路径、DTO、错误码或业务语义 | 未修改API/DB/ENUM/流程契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
