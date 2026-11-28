@@ -396,3 +396,101 @@ ALTER TABLE lodging_reservation
 2. `LodgingConcurrencyIT.concurrentBookingsOnDisjointPeriodsAllSucceed`：测试用 `1 + i*3` 手算日期，生成 `2027-03-33` 越界。改用 `LocalDate.plusDays`（TE-20261127-09）。
 
 两次均为**测试自身缺陷**，不是产品代码缺陷；均已修复并复测通过，失败记录保留未删除。
+
+## OP-20261127-04：BK-02 第一阶段——创建住宿订单事务编排
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 12:23–12:50 +08:00（Asia/Shanghai） |
+| 任务 | 按用户「按照建议继续」执行 BK-02 第一部分：创建订单 + 占用 + 幂等（应用层事务） |
+| 分支 | `feature/database-core`，开始 HEAD `ee3606b`，ahead origin/develop 9、behind 0；`origin/develop` 仍为 `3404221` |
+| 用户授权 | 同意按建议继续 BK-02，允许分两次交付 |
+| 修改/新增文件 | 新增 `catalog/{application,infrastructure/persistence}`、`pricing/{domain,application,infrastructure/persistence}`、`lodging/{application,infrastructure/persistence}`、`order/{application,infrastructure/persistence}`、`booking/application` 共 12 个类；修改 `common/web/BusinessException.java`（新增带 details 的构造）；新增 `BookingApplicationServiceIT` |
+| 操作 | 按 ARCHITECTURE.md §1 四层与 §2.1 依赖图建模块；`BookingApplicationService` 作为唯一 `@Transactional` 边界；空库重建后全量测试 |
+| Skill | `project-governance`、`git-pr`、`test-evidence` 应用；`contract-change` **不适用**：未改契约条文，只是实现既有契约行为 |
+| 测试 | `mvn -B -Pdb test`（空库）→ 101 测试全绿，退出码 0；`BookingApplicationServiceIT` 12 用例；默认构建 14 测试；开发库 0 表；ArchUnit 8 规则全绿 |
+| 结果 | 创建住宿订单的完整事务路径可用：价格服务端重算、幂等、原子创建、冲突整单回滚 |
+| 风险 | ① 未接 HTTP 层（需 Spring Security，S4）；② 只覆盖住宿，套餐/滑雪/装备待 B 侧表；③ 订单号生成器为单进程方案 |
+
+### 架构落地说明
+
+严格按 `docs/ARCHITECTURE.md` §2.1 依赖图实现，`BookingApplicationService` 是**唯一开启跨模块事务的地方**（ADR-009）：
+
+```
+booking/application/BookingApplicationService  (@Transactional)
+  ├─► catalog/application/CatalogQueryPort          ← ResourceSnapshot
+  ├─► pricing/application/PricingQueryPort          ← PriceCalculator.Rule
+  ├─► order/application/OrderWritePort              ← 写订单/明细/快照
+  └─► lodging/application/LodgingReservationPort    ← 写占用
+```
+
+- 模块间只经 `application` 层端口协作，不跨模块访问 Mapper（R10）。
+- `pricing/domain/PriceCalculator` 是纯领域类，不依赖 Spring/MyBatis/DB（R9）。
+- 住宿冲突不继承 `BusinessException`，由 booking 编排层翻译为 `BOOKING_CONFLICT`，使 `lodging` 模块不依赖 `common.web` 协议层。
+
+### 发现并修复的产品代码缺陷
+
+`CreateLodgingOrderCommand.fingerprint()` 原先拼接原始字符串，两间房的指纹超出 `customer_order.create_request_fingerprint varchar(128)`，导致多间房下单失败（TE-20261127-11 首次失败）。改为 SHA-256 定长摘要，同时保留行序排序语义。这是**本轮自己引入并自己发现的缺陷**，不是既有代码问题。
+
+### 关于未接 HTTP 层
+
+契约要求「创建订单必须登录」，而 Spring Security/JWT 属 S4 范围（`ARCHITECTURE.md` 版本矩阵）。本轮**只实现并验证 application 层事务**，不暴露 `POST /orders` 端点，避免产生一个无认证的订单创建入口。这是有意的顺序选择，已在 TE-20261127-12 标注。
+
+## OP-20261127-05：当前进度、缺陷与下一步审查
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 22:18–22:35 +08:00（Asia/Taipei） |
+| 分类 | REVIEW + TEST + GIT |
+| 授权边界 | 只审查与记录；不改业务代码/契约语义，不提交、不推送、不合并、不修改 GitHub 设置 |
+| 启动状态 | `feature/database-core` / `66910b1`；工作树干净；fetch 后相对 `origin/develop` ahead 10；本地 `develop` behind 12 |
+| GitHub | PR #2/#3 均 OPEN、MERGEABLE、REVIEW_REQUIRED、0 review、无 CI checks；请求 `Janovo2117` |
+| 审查结果 | 数据库/约束/并发基础较扎实，但契约未批准且实现未集成；登记 R6-01~R6-06，其中并发幂等、stayMode 校验、DAY_PASS 与默认测试隔离为优先修复项 |
+| 测试 | 默认测试 FAIL（退出码1）；真实 PostgreSQL `-Pdb` 回归 101/101 PASS（退出码0），边界见 TE-20261127-13 |
+| 文档同步 | 更新 DEVELOPMENT、CHANGELOG Known limitations、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志；TEAM_TASK_BOARD 无状态变化，未改；公共契约无语义变更 |
+| 外部操作 | 仅 `git fetch` 与只读 `gh pr view/list/status`；未留言、未 Review、未改 PR、未合并 |
+| 推荐顺序 | 先完成 PR #2 人工 Review → 修 R6-02~R6-05 并补测试 → 完成 BK-01 可用性与 BK-02 支付/取消/过期 → 接认证/HTTP → B 侧前端与 P0-B |
+
+## OP-20261127-06：不等待 Review，先修创建订单核心缺陷
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 22:30–22:40 +08:00（Asia/Taipei） |
+| 分类 | FIX + TEST + DB + GIT |
+| 用户授权 | `Janovo2117` Review 预计1–2天；明确要求先完成不依赖 Review 的后续工作 |
+| 范围 | 修 R6-02~R6-05 与请求内重复资源；不改公共契约、V1~V5、前端或B侧模块 |
+| 实施 | advisory transaction lock 串行同用户同键；调用现有 stayMode 支持关系；按上海时区计算 OVERNIGHT/DAY_PASS；默认上下文测试改 `*IT`；补输入边界 |
+| 测试 | 默认13/13、定向20/20、完整PostgreSQL 110/110，全部退出码0；TE-20261127-14 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志 |
+| 契约/迁移 | 无契约语义变更；无 Flyway 变更；`contract-change` 不适用 |
+| 剩余 | BK-01 可用性/维修/开放规则；BK-02 支付/取消/过期/状态历史；认证/HTTP；前端 |
+
+## OP-20261127-07：BK-01 维修区间联动
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 22:40–22:47 +08:00（Asia/Taipei） |
+| 分类 | FIX + TEST + DB + GIT |
+| 用户授权 | Review 预计1–2天；继续完成不依赖 Review 的后续工作 |
+| 范围 | 在既有 V2 维修模型上接入创建订单校验；不改公共契约、迁移、枚举、端点或前端 |
+| 实施 | catalog 查询端口按资源和半开请求区间查询 `OPEN/IN_PROGRESS` 维修；booking 在任何订单写入前以 `RESOURCE_NOT_OPEN` 拒绝；完成/取消维修不阻断 |
+| 测试 | 定向22/22、默认13/13、完整PostgreSQL 112/112，全部退出码0；TE-20261127-15 |
+| 契约判断 | OVERNIGHT 开放规则校验粒度在候选契约中不明确，登记 R6-08，不擅自实现；`contract-change` 不适用 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志 |
+| 剩余 | BK-01 独立可用性查询/开放规则；BK-02 支付/取消/过期/状态历史；认证/HTTP；前端 |
+
+## OP-20261127-08：第三次独立审计任务 B/C 整改
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:04–23:16 +08:00（Asia/Taipei） |
+| 分类 | FIX + TEST + DB + GIT |
+| 输入 | 用户提供第三次独立只读审计报告，明确授权任务 B/C |
+| 范围 | Jackson 3 JSON 序列化、真实资源名快照、两个新增 IT、Maven clean 与完整 PostgreSQL 回归；不改公共契约、Flyway、API或前端 |
+| 实施 | 移除手写 JSON 转义；catalog 资源快照携带 `resource_unit.name`；booking 写真实名称；新增控制字符 JSONB 与资源名两项 IT |
+| 单项测试 | 两个新增 IT 分别单独运行，均1/1 PASS、退出码0；含真实 LF 的规则描述成功写入并从 PostgreSQL JSONB 解码 |
+| clean 回归 | `mvn clean` 退出码0；陈旧报告消失；clean 后 `-Pdb` 114/114 PASS、退出码0；TE-20261127-16 |
+| Diff 门禁 | 检查完整代码/测试/文档 diff；`git diff --check` 无空白错误、退出码0，仅有既有 CRLF→LF 提示 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志 |
+| 契约/迁移 | 只补齐已有 `resource_unit.name` → `item_name_snapshot` 数据链路；无 DB/API/ENUM/业务流程条文变化，`contract-change` 不适用 |
+| 剩余 | R6-08 开放规则待 Review；BK-02 支付/取消/过期；认证/HTTP；前端 |

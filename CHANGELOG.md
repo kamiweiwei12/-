@@ -36,6 +36,15 @@
 - 接入 `springdoc-openapi 3.2.0`（父 POM 为 Boot 4.1.2，与项目 4.1.3 同代），暴露 `/v3/api-docs` 与 Swagger UI。
 - 新增 `V4__order_and_payment.sql`：`package_offer`/`customer_order`/`order_package`/`order_item`/`order_status_history`/`order_item_status_history`/`payment`/`price_snapshot_line` 八表；含创建幂等键 `(user_id,key)` 与支付幂等键 `(order_id,key)` 作用域约束、`uq_payment_succeeded_per_order` 部分唯一索引（一单至多一条成功支付）、`method` 恒为 `SIMULATED` 的 CHECK。
 - 新增 `OrderAndPaymentConstraintIT`：20 个订单/支付/套餐/快照约束测试。
+- BK-02 第一阶段：实现创建住宿订单的跨模块事务编排 `BookingApplicationService`（唯一 `@Transactional` 边界，ADR-009），串联 catalog 资源快照、pricing 价格重算、order 订单/明细/快照写入、lodging 占用写入。
+- 新增 `pricing/domain/PriceCalculator`：纯领域价格计算，支持 `FIXED`/`MULTIPLIER`/`ADDITION`，同优先级多条规则判定为冲突而非静默选胜者。
+- 新增模块端口 `CatalogQueryPort`、`PricingQueryPort`、`OrderWritePort`、`LodgingReservationPort` 及其 MyBatis 适配器，模块间只经 `application` 层协作（符合 R10）。
+- 新增 `BookingApplicationServiceIT`：12 个事务路径测试，覆盖原子创建、多间房、幂等重放、同键不同请求冲突、重叠整单回滚、价格变化、规则冲突、优先级、非法时段、资源不存在、超容量。
+- 强化 `BookingApplicationServiceIT` 至 20 个路径：新增 8 并发同键同请求只建一单、同键异请求稳定冲突、资源模式拒绝、DAY_PASS 同日/跨偏移量上海业务日、重复资源、空幂等键和非正人数。
+- `BusinessException` 新增「消息 + 结构化 details」构造，供 `PRICE_CHANGED` 等携带新报价。
+- 创建订单在读取幂等记录前获取 PostgreSQL 事务级 advisory lock，消除 `(user_id, Idempotency-Key)` 并发先查后插竞态；锁随事务自动释放。
+- 创建住宿订单在写入前校验 `resource_maintenance`：与请求半开区间重叠的 `OPEN`/`IN_PROGRESS` 维修记录阻断预订，`COMPLETED`/`CANCELLED` 不阻断。
+- 创建订单价格说明改由 Jackson 3 序列化，支持规则描述中的换行、引号、反斜杠与中文安全写入 PostgreSQL `jsonb`；订单明细名称快照改用真实 `resource_unit.name`。
 - 新增 `V5__lodging_reservation.sql`：`lodging_reservation` 与 `lodging_reservation_status_history`；落地契约核心的住宿时间排斥约束 `EXCLUDE USING gist (resource_unit_id WITH =, stay_period WITH &&) WHERE occupancy_status IN ('HELD','CONFIRMED','IN_USE')`，`RELEASED` 排除在谓词外。
 - 新增 `LodgingExclusionConstraintIT`：12 个排斥约束语义测试（重叠/包含/首尾相接/RELEASED 释放/跨资源/空区间/无界区间/非法状态/一单一占用/级联清除）。
 - 新增 `LodgingConcurrencyIT`：**100 并发抢 1 资源**真实验证（独立连接并发），成功 1 / 冲突 99 / 无残留；另有 20 个互不重叠并发窗口全部成功的反向验证。
@@ -61,10 +70,12 @@
 - `docs/ARCHITECTURE.md` 追加 ADR-006~ADR-012 并重构模块/依赖/安全/时间/测试章节，保留 ADR-001~005 原文。
 - 本地开发数据库端口由 `5432` 改为 `5433`：本机原生 PostgreSQL 18 服务占用 5432，会导致 JDBC 连到本机实例而非容器；`.env.example` 与 `application.yml` 同步。
 - `docs/ARCHITECTURE.md` 版本矩阵中 springdoc 由「3.2.x / S5 引入（暂缓）」写实为「3.2.0 / S2 已引入」：实测 3.2.1 父 POM 已为 Boot 4.2.0，与 ADR-012 冲突。
+- 服务日计算统一换算到 `Asia/Shanghai`：OVERNIGHT 展开半开住宿夜，DAY_PASS 同一业务日计一个服务日；创建订单同时校验 `resource_type_stay_mode` 与请求内资源不重复。
+- 将数据库上下文门禁由默认 `SnowfieldApplicationTests` 改为 `SnowfieldApplicationIT`，默认 `mvn test` 恢复为不连接数据库。
 
 ### Known limitations
 
-- React 前端工程尚未创建；正式业务迁移只完成身份与权限三张表（`V1__baseline.sql`），营地/资源/价格/订单/库存待 S3。
-- 后端 S2 已验证：MyBatis 4.1.0 + Spring Boot 4.1.3 + PostgreSQL 16 + Flyway 12.4.0 在 Java 21 下真实可用，`mvn -B -Pdb test` 33 个测试全绿（TE-20261126-19）；统一响应/异常/健康/OpenAPI 已在真实 HTTP 服务上验证。Spring Security/JWT 仍未接入（S4）。
-- 集成测试需要真实 PostgreSQL：先 `docker compose up -d db` 与 `scripts/test-db-init.ps1`；默认 `mvn test` 不连数据库，不得作为数据库证据。
-- 尚无可运行业务，因此没有业务闭环、并发或性能测试结果。
+- React 前端工程尚未创建；Spring Security/JWT、订单 HTTP API、模拟支付、取消、过期释放与状态历史尚未实现，因此还没有端到端住宿业务闭环。
+- V1~V5 与创建住宿订单 application 事务已落地；2026-11-27 执行 `mvn clean` 后在现有 PostgreSQL 16 测试库重跑 `mvn -B -Pdb test`，114 个测试通过（TE-20261127-16）。这不是空库迁移复测；维修联动已覆盖，独立可用性查询与开放规则仍未完成。
+- 默认 `mvn test` 已恢复为无数据库的 13 个单元/架构测试；数据库上下文、迁移与业务集成只在显式 `-Pdb` 下运行。
+- 公共契约 PR #2 与实现 PR #3 均无 Review、无 CI 检查结果，不能视为正式冻结或已集成；住宿排斥约束已有 100 并发数据库层证据，但尚无真实 HTTP/JMeter 性能证据。

@@ -118,3 +118,58 @@
 | contract-change | `.agents/skills/contract-change/SKILL.md` | **不适用**：未修改契约条文 | 仅按 `DATABASE_CONTRACT.md` §2 的 `lodging_reservation` 定义与排斥谓词原文落地 DDL；`OccupancyStatus` 取值域直接取自 `ENUMS.md` | NOT APPLICABLE（契约条文无变更） |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-04
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：跨模块应用层开发 | 完整读取；启动检查（分支/HEAD/工作树/fetch 后 0 behind/`origin/develop` 未变）；任务分类 `FEAT`+`TEST`；风险判断：未改契约、未暴露无认证端点；§13 闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md` | 适用：本轮提交与推送 | 完整读取；只暂存明确文件；`git diff --check`；未合并 PR、未改分支保护 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：事务与幂等测试 | 完整读取；空库重建后全量执行；首次失败（产品代码缺陷）与编译歧义均保留并追加复测；TE-20261127-12 标注未覆盖范围 | APPLIED |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | **不适用**：未修改契约条文 | 以 `API_CONTRACT.md` §1/§2/§4 与 `DATABASE_CONTRACT.md` §2 为行为依据实现；未改动任何契约文件 | NOT APPLICABLE（契约条文无变更） |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-05
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：本轮为实质性进度/缺陷审查 | 完整读取；恢复分支/HEAD/工作树/远端/任务板/开发日志/审计/PR；分类 REVIEW+TEST+GIT；结束时同步审计与进度文档 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：执行 fetch 与只读 PR 核查 | 核对 ahead/behind、PR base/head、review、mergeability、checks；未提交/推送/Review/合并/改设置 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：重跑默认测试和 PostgreSQL 回归 | 保留默认测试退出码1；追加 `-Pdb` 101 测试退出码0；明确干净库、DAY_PASS、并发幂等等 NOT RUN 边界 | APPLIED；TE-20261127-13 |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：只读取契约判断实现一致性，未修改任何公共契约语义 | 未执行八消费者变更流程；发现的问题记入 ISSUES，等待后续实现修复或人工 Review | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-06
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：跨模块修复与真实数据库并发测试 | 恢复 Git/远端/任务板/契约/问题状态；限定不改迁移和契约；完整 diff、测试和文档闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：继续在已有 PR #3 分支工作并准备提交 | fetch 后确认 `origin/develop` 无新增分歧；保留上一轮自有文档修改；提交前执行完整 diff 与 `git diff --check`；未合并/改设置 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：默认、定向及全量 PostgreSQL 测试 | 记录13/13、20/20、110/110与退出码0；明确非空库、未运行范围 | APPLIED；TE-20261127-14 |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：实现并验证候选契约既有规则，未修改 DB/API/ENUM/流程条文 | 未新增表、迁移、枚举、端点或状态；公共契约仍保持 `v1.0-rc` | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-07
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：跨 catalog/booking 的数据库业务校验 | 恢复 Git/任务板/开发日志/契约；限定不改迁移和契约；执行测试、完整 diff 与文档闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：继续向已有 PR #3 提交 | 只暂存本轮文件；提交前执行完整 diff 与 `git diff --check`；不合并、不改设置、不代替 Review | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：维修正反例与全量回归 | 记录22/22、13/13、112/112及退出码0；明确非空库及未运行边界 | APPLIED；TE-20261127-15 |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：只实现候选契约已有维修状态/区间语义 | 未修改 DB/API/ENUM/流程；开放规则歧义登记 R6-08 并停止对应实现 | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261127-08
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：独立审计整改、跨 catalog/booking 修复与 clean 回归 | 完整读取；恢复 Git/任务板/开发状态；限定任务 B/C；测试、完整 diff、文档和 Git 闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：继续向已有 PR #3 提交 | fetch 后确认分支与工作树；只暂存本轮文件；提交前执行完整 diff/`git diff --check`；不合并、不改设置 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：两个新增 IT、clean 与完整 PostgreSQL 回归 | 两项 IT 各自记录实测输出/退出码；clean 后记录114项逐类汇总、Maven最终输出、退出码和陈旧报告终检 | APPLIED；TE-20261127-16 |
+| contract-change | 未读取（本轮不适用） | 不适用：没有修改 DB/API/ENUM/业务流程公共条文 | 复用既有 `resource_unit.name` 与 `item_name_snapshot` 字段；内部快照增加字段不改变外部契约 | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。

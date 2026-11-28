@@ -26,6 +26,17 @@ public class BusinessException extends RuntimeException {
         this.details = Map.of();
     }
 
+    /**
+     * 带自定义消息与结构化细节（如 {@code PRICE_CHANGED} 附上新报价值）。
+     * 字段级错误列表为空，需要字段错误时用三参构造。
+     */
+    public BusinessException(ErrorCode errorCode, String message, Map<String, Object> details) {
+        super(message);
+        this.errorCode = errorCode;
+        this.fieldErrors = List.of();
+        this.details = details == null ? Map.of() : details;
+    }
+
     public BusinessException(ErrorCode errorCode, List<ApiError.FieldError> fieldErrors,
                              Map<String, Object> details) {
         this.errorCode = errorCode;
