@@ -774,3 +774,20 @@
 | 边界断言 | 128 ASCII字符经真实HTTP支付成功且仅一条payment；128非BMP Unicode字符经application成功入库；129 ASCII字符在锁/写库前抛`VALIDATION_FAILED`，真实HTTP为400且payment计数为0 |
 | 结论 | PASS：应用输入边界与既有V4 `varchar(128)`一致，异常输入不再下沉为数据库异常或HTTP 500；修复前失败如实保留 |
 | 验证边界 | 未修改API契约、V4迁移或数据库；API契约当前未明示128字符上限，是否公开补充需双人Review；未测试反向代理自身的请求头大小限制 |
+
+## TE-20261128-07：支付 HTTP 协议异常边界
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 19:26–19:30 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `c80ce5d` + 本轮工作区改动；启动时工作树干净；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead22/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3/Tomcat 11.0.27；真实 PostgreSQL 16.16测试库，Flyway schema v5 |
+| 首次环境失败 | `.\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT' test` 在沙箱内无法建立数据库连接，ApplicationContext启动失败，20项全部error，`BUILD FAILURE`，退出码1；未到达新增断言，不归因为代码 |
+| 修复前真实HTTP | 以允许本机测试库连接的同一命令重跑：`Tests run: 20, Failures: 1, Errors: 0, Skipped: 0`；畸形JSON、缺失请求体、非法路径ID均通过；`text/plain` 实际返回500 `INTERNAL_ERROR`，预期400；`BUILD FAILURE`；`Total time: 20.223 s`；退出码1 |
+| 修复后定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=GlobalExceptionHandlerTest,SecurityPaymentWebIT' test` |
+| 修复后定向结果 | 单元4/4、真实HTTP20/20，总计24/24，0失败/0错误/0跳过；`BUILD SUCCESS`；`Total time: 24.817 s`；`Finished at: 2026-11-28T19:28:36+08:00`；退出码0 |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 19, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 5.335 s`；`Finished at: 2026-11-28T19:28:47+08:00`；退出码0 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 166, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:22 min`；`Finished at: 2026-11-28T19:30:18+08:00`；退出码0 |
+| 边界断言 | 畸形JSON、缺失请求体、非法路径ID和`text/plain`均返回统一400 `VALIDATION_FAILED`，包含traceId且不泄漏内部信息；四类请求后payment均为0 |
+| 结论 | PASS：不支持的媒体类型不再落入500；既有其他协议异常路径保持稳定400，完整回归未受影响；两次失败均如实保留 |
+| 验证边界 | 仅验证现有模拟支付端点；未设置全局请求体字节上限、频率限制或代理限制，这些仍NOT RUN；未修改公开API、错误码集合、数据库或Flyway |

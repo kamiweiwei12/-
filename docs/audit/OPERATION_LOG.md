@@ -638,3 +638,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 提交门禁 | 完整审查13个暂存文件（150新增/4删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
 | 契约/迁移 | 只把application校验对齐既有数据库事实；未修改API/DB/ENUM/流程条文或Flyway；`contract-change`不适用 |
 | 剩余 | R6-08/R6-11及API长度说明继续等待Review；下一独立单元可检查已有HTTP请求体/分页大小与滥用边界 |
+
+## OP-20261128-07：支付 HTTP 协议异常边界
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 19:24–19:32 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + FIX + TEST + DOC + GIT |
+| 用户授权 | 同意继续不依赖 `Janovo2117` Review 的后续工作 |
+| 启动状态 | `feature/database-core` / `c80ce5d`；工作树干净；fetch后功能分支0/0、相对develop ahead22/behind0；PR #3为OPEN/REVIEW_REQUIRED、0 review、0 checks |
+| 范围 | 现有模拟支付端点的畸形JSON、缺失请求体、非法路径ID与错误媒体类型；不改API契约、错误码集合、数据库/Flyway、认证或前端 |
+| 实施 | 先以真实HTTP测试四类协议错误；定位`text/plain`落入通用500后，仅为`HttpMediaTypeNotSupportedException`增加既有400 `VALIDATION_FAILED`映射，并补handler单测 |
+| 测试 | 首次沙箱数据库连接失败20 errors；允许本机测试库后修复前20项中1失败；修复后定向24/24、默认19/19、全量PostgreSQL166/166，最终均退出码0；TE-20261128-07 |
+| 发现 | R6-15：错误媒体类型被误报500；已修复并登记。其他三类协议错误原实现已正确返回400，无额外改动 |
+| 提交门禁 | 完整审查12个暂存文件（161新增/6删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
+| 契约/迁移 | 复用既有`VALIDATION_FAILED`，未新增状态/字段/错误码或修改DB/ENUM/流程/Flyway；`contract-change`不适用 |
+| 剩余 | 全局请求体字节上限、频率限制及反向代理限制仍NOT RUN；R6-08/R6-11继续等待Review |

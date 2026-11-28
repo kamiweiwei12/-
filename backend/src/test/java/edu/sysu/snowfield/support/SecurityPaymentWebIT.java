@@ -250,6 +250,38 @@ class SecurityPaymentWebIT {
     }
 
     @Test
+    void malformedJsonReturnsValidationErrorWithoutDatabaseWrite() throws SQLException {
+        assertError(() -> rawPaymentRequest(Long.toString(order.orderId()), MediaType.APPLICATION_JSON,
+                        "{\"desiredOutcome\":", true),
+                HttpStatus.BAD_REQUEST, "VALIDATION_FAILED");
+        assertThat(scalar("SELECT count(*) FROM payment WHERE order_id = " + order.orderId())).isZero();
+    }
+
+    @Test
+    void missingRequestBodyReturnsValidationErrorWithoutDatabaseWrite() throws SQLException {
+        assertError(() -> rawPaymentRequest(Long.toString(order.orderId()), MediaType.APPLICATION_JSON,
+                        null, false),
+                HttpStatus.BAD_REQUEST, "VALIDATION_FAILED");
+        assertThat(scalar("SELECT count(*) FROM payment WHERE order_id = " + order.orderId())).isZero();
+    }
+
+    @Test
+    void invalidOrderPathIdReturnsValidationErrorWithoutDatabaseWrite() throws SQLException {
+        assertError(() -> rawPaymentRequest("not-a-number", MediaType.APPLICATION_JSON,
+                        "{\"desiredOutcome\":\"SUCCESS\"}", true),
+                HttpStatus.BAD_REQUEST, "VALIDATION_FAILED");
+        assertThat(scalar("SELECT count(*) FROM payment")).isZero();
+    }
+
+    @Test
+    void unsupportedMediaTypeReturnsValidationErrorWithoutDatabaseWrite() throws SQLException {
+        assertError(() -> rawPaymentRequest(Long.toString(order.orderId()), MediaType.TEXT_PLAIN,
+                        "{\"desiredOutcome\":\"SUCCESS\"}", true),
+                HttpStatus.BAD_REQUEST, "VALIDATION_FAILED");
+        assertThat(scalar("SELECT count(*) FROM payment WHERE order_id = " + order.orderId())).isZero();
+    }
+
+    @Test
     void corsAllowsConfiguredFrontendAndRejectsUnknownOrigin() {
         ResponseEntity<String> allowed = client().options()
                 .uri("/api/v1/orders/{id}/payments/simulate", order.orderId())
@@ -292,6 +324,19 @@ class SecurityPaymentWebIT {
         }
         return request.body("{\"desiredOutcome\":\"" + outcome + "\"}")
                 .retrieve().toEntity(String.class);
+    }
+
+    private ResponseEntity<String> rawPaymentRequest(String orderId, MediaType contentType,
+                                                      String body, boolean includeBody) {
+        RestClient.RequestBodySpec request = client().post()
+                .uri("/api/v1/orders/{id}/payments/simulate", orderId)
+                .contentType(contentType)
+                .header("Authorization", "Bearer " + token(userId, "CUSTOMER"))
+                .header("Idempotency-Key", "pay-http-protocol-boundary");
+        if (includeBody) {
+            request.body(body);
+        }
+        return request.retrieve().toEntity(String.class);
     }
 
     private ResponseEntity<String> get(String path, String token) {

@@ -272,3 +272,14 @@
 | contract-change | 未读取（本轮不适用） | 不适用：application校验仅对齐V4既有`varchar(128)`，未改变公开API/DB/ENUM/流程 | API契约未明示上限登记R6-14，留待另一成员Review；未修改契约或Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-07
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：HTTP协议边界修复、测试、文档与Git闭环 | 恢复Git/远端/PR/任务板/日志/API；先以真实HTTP复现；限定只复用既有错误码；同步强制记录 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：单元、真实HTTP、数据库零写入及全量回归 | 保留沙箱连接失败和修复前HTTP500；记录最终定向24、默认19、全量166的输出、退出码及NOT RUN边界 | APPLIED；TE-20261128-07 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立修复提交 | fetch确认0 behind；核验PR仍待Review且无checks；仅暂存本单元并执行完整diff/敏感信息/空白门禁；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：错误媒体类型复用现有400 `VALIDATION_FAILED`，未改变公开错误码集合或业务语义 | 未修改API/DB/ENUM/流程契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。

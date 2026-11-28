@@ -38,4 +38,12 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, resp.getStatusCode());
         assertEquals("INTERNAL_ERROR", resp.getBody().error().code());
     }
+
+    @Test
+    void unsupportedMediaType_mapsToValidationFailure() {
+        ResponseEntity<ErrorResponse> resp = handler.handleUnsupportedMediaType();
+
+        assertEquals(HttpStatus.BAD_REQUEST, resp.getStatusCode());
+        assertEquals("VALIDATION_FAILED", resp.getBody().error().code());
+    }
 }

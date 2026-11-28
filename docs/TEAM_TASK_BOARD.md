@@ -13,7 +13,7 @@
 | INF-01 | 初始化Spring Boot/Maven | P0 | GOV-04 | A | 朱承威 | DONE | Java21构建和基础JUnit通过（S1，`2bce281`，14 测试） |
 | INF-02 | PostgreSQL Docker Compose | P0 | GOV-04 | A | 朱承威 | DONE | 健康检查通过；容器映射 5433（本机原生 PG18 占 5432）；见 TE-20261126-16 |
 | INF-03 | MyBatis/Flyway连接 | P0 | INF-01, INF-02 | A | 朱承威 | DONE | 空库迁移成功、禁用自动DDL、真实 PostgreSQL 28 测试通过（TE-20261126-16） |
-| INF-04 | 统一响应/异常/健康/OpenAPI | P0 | INF-01 | A | 朱承威 | DONE | 真实启动 HTTP 验证统一信封/404/安全头/Swagger默认关闭/`bearerAuth`；过滤链验证HSTS仅用于secure request；启用/禁用共10项通过（TE-20261128-04/05） |
+| INF-04 | 统一响应/异常/健康/OpenAPI | P0 | INF-01 | A | 朱承威 | DONE | 真实启动 HTTP 验证统一信封/404/安全头/Swagger默认关闭/`bearerAuth`；协议异常不误报500，过滤链验证HSTS仅用于secure request（TE-20261128-04/05/07） |
 | INF-05 | 初始化React/Vite/TS/Ant Design | P0 | GOV-04 | B | UNASSIGNED | TODO | lint/build通过，基础页面可访问 |
 | INF-06 | 前端路由/API客户端/状态页 | P0 | INF-04, INF-05 | B | UNASSIGNED | TODO | 用户/管理路由及Loading/Empty/Error示例 |
 | DB-01 | V1基础扩展/用户/角色迁移 | P0 | INF-03 | A | 朱承威 | IN_REVIEW | V1 身份与权限三表迁移已落地，唯一/检查/外键反例测试通过（TE-20261126-16）；完整 DB-01 范围待补 |
