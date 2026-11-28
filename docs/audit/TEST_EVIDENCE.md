@@ -757,3 +757,20 @@
 | GitHub只读核验 | PR #3 为OPEN，base=`develop`、head=`feature/database-core`、`REVIEW_REQUIRED`、0 review、0 checks；未合并 |
 | 结论 | PASS：应用实际Spring Security过滤链的HSTS secure/HTTP分支已有自动化证据，且完整回归未受影响 |
 | 验证边界 | 测试以Mock servlet request模拟secure属性，不是TLS握手；真实域名/CA证书、边缘代理清洗、转发头策略与外部HTTPS响应均NOT RUN；不把本证据表述为生产HTTPS已部署 |
+
+## TE-20261128-06：支付幂等键数据库长度边界
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 18:54–19:00 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `0dd183f` + 本轮工作区改动；启动时工作树干净，fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead21/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；真实 PostgreSQL 16.16测试库，Flyway schema v5 |
+| 修复前命令 | `.\mvnw.cmd -B -Pdb '-Dtest=PaymentApplicationServiceIT,SecurityPaymentWebIT' test` |
+| 修复前实测 | `Tests run: 36, Failures: 2, Errors: 0, Skipped: 0`；application负例实际抛出 `DataIntegrityViolationException`，PostgreSQL报告 `value too long for type character varying(128)`；HTTP负例实际返回500/`INTERNAL_ERROR`；`BUILD FAILURE`；退出码1。同期128字符HTTP正例已通过 |
+| 修复后组合复测 | 同命令；`PaymentApplicationServiceIT` 20/20、`SecurityPaymentWebIT` 16/16，总计36/36；`BUILD SUCCESS`；`Total time: 31.930 s`；`Finished at: 2026-11-28T18:57:28+08:00`；退出码0 |
+| Unicode数据库语义 | `.\mvnw.cmd -B -Pdb '-Dtest=PaymentApplicationServiceIT' test`；新增128个非BMP Unicode code point键真实写入成功；21/21；`BUILD SUCCESS`；`Total time: 21.717 s`；`Finished at: 2026-11-28T18:58:21+08:00`；退出码0 |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 4.749 s`；`Finished at: 2026-11-28T18:58:36+08:00`；退出码0 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 161, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:21 min`；`Finished at: 2026-11-28T19:00:07+08:00`；退出码0 |
+| 边界断言 | 128 ASCII字符经真实HTTP支付成功且仅一条payment；128非BMP Unicode字符经application成功入库；129 ASCII字符在锁/写库前抛`VALIDATION_FAILED`，真实HTTP为400且payment计数为0 |
+| 结论 | PASS：应用输入边界与既有V4 `varchar(128)`一致，异常输入不再下沉为数据库异常或HTTP 500；修复前失败如实保留 |
+| 验证边界 | 未修改API契约、V4迁移或数据库；API契约当前未明示128字符上限，是否公开补充需双人Review；未测试反向代理自身的请求头大小限制 |

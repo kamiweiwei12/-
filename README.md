@@ -2,7 +2,7 @@
 
 Snowfield Four-Season Resort Management System 是中山大学数据库系统课程设计项目。系统面向全年运营的山地度假营地，统一管理住宿/营位预订、季节价格、模拟支付、滑雪票与课程、缆车时段容量、装备租赁和运营统计。
 
-当前状态：**公共契约仍为 v1.0-rc 候选版，尚未通过双人 Review。** 后端已落地 V1~V5、住宿创建/支付/取消/过期 application 生命周期、Spring Security/JWT 边界与模拟支付 HTTP 入口；Swagger/OpenAPI 已声明 Bearer JWT，但部署默认关闭并需显式开启；HSTS 的 HTTPS/HTTP 过滤链分支已有自动验证；真实 PostgreSQL 全量回归 157 项通过（TE-20261128-05）。这些实现仍在 PR #3 等待 `Janovo2117` 审查，尚未集成到 `develop`；前端尚未创建。
+当前状态：**公共契约仍为 v1.0-rc 候选版，尚未通过双人 Review。** 后端已落地 V1~V5、住宿创建/支付/取消/过期 application 生命周期、Spring Security/JWT 边界与模拟支付 HTTP 入口；支付幂等键已在写库前按既有 `varchar(128)` 数据库边界校验；Swagger/OpenAPI 已声明 Bearer JWT，但部署默认关闭并需显式开启；HSTS 的 HTTPS/HTTP 过滤链分支已有自动验证；真实 PostgreSQL 全量回归 161 项通过（TE-20261128-06）。这些实现仍在 PR #3 等待 `Janovo2117` 审查，尚未集成到 `develop`；前端尚未创建。
 
 ## 冻结技术栈
 

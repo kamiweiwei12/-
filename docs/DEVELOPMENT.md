@@ -4,7 +4,7 @@
 
 - 公共契约仍是 `v1.0-rc`：PR #2 可合并但为 `REVIEW_REQUIRED`，0 review，等待 `Janovo2117`；尚不能称为正式冻结。
 - 后端 S1/S2 已完成；PR #3 在 `feature/database-core` 上继续累积不依赖 Review 的实现，同样等待 Review，尚未集成到 `develop`。
-- 数据库已实现 V1~V5；Spring Security/JWT 边界、Swagger/OpenAPI Bearer 声明和模拟支付 HTTP 入口已接入；安全响应头与HSTS secure/HTTP分支已有过滤链验证，Swagger/OpenAPI部署默认关闭；真实 PostgreSQL `-Pdb` 回归 157 个测试通过（TE-20261128-05）。
+- 数据库已实现 V1~V5；Spring Security/JWT 边界、Swagger/OpenAPI Bearer 声明和模拟支付 HTTP 入口已接入；支付幂等键在写库前按既有 `varchar(128)` 边界校验；安全响应头与HSTS secure/HTTP分支已有过滤链验证，Swagger/OpenAPI部署默认关闭；真实 PostgreSQL `-Pdb` 回归 161 个测试通过（TE-20261128-06）。
 - BK-02 application 生命周期已完成，支付 HTTP 已验证从 JWT `sub` 获取用户并执行对象所有权/幂等检查；注册/登录、当前用户、创建/查询/取消订单 HTTP 因 DTO 契约不完整暂缓（R6-11）。BK-01 已接入维修阻断；独立可用性查询和开放规则语义仍有缺口。
 - 前端工程尚未创建。
 - 默认测试保持无数据库构建：18 个单元/架构/安全配置测试通过；数据库上下文门禁仅在 `-Pdb` 运行（TE-20261128-02）。

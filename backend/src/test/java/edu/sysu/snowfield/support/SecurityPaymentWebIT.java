@@ -225,6 +225,23 @@ class SecurityPaymentWebIT {
     }
 
     @Test
+    void idempotencyKeyAtDatabaseBoundaryIsAccepted() throws SQLException {
+        ResponseEntity<String> response = paymentRequest(
+                order.orderId(), token(userId, "CUSTOMER"), "k".repeat(128), "SUCCESS");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(scalar("SELECT count(*) FROM payment WHERE order_id = " + order.orderId())).isEqualTo(1);
+    }
+
+    @Test
+    void oversizedIdempotencyKeyReturnsValidationErrorWithoutDatabaseWrite() throws SQLException {
+        assertError(() -> paymentRequest(order.orderId(), token(userId, "CUSTOMER"),
+                        "k".repeat(129), "SUCCESS"),
+                HttpStatus.BAD_REQUEST, "VALIDATION_FAILED");
+        assertThat(scalar("SELECT count(*) FROM payment WHERE order_id = " + order.orderId())).isZero();
+    }
+
+    @Test
     void invalidOutcomeReturnsValidationErrorWithoutWritingPayment() throws SQLException {
         assertError(() -> paymentRequest(order.orderId(), token(userId, "CUSTOMER"),
                         "pay-http-bad", "MAYBE"),

@@ -261,3 +261,14 @@
 | contract-change | 未读取（本轮不适用） | 不适用：仅验证既有Spring Security HSTS行为并补部署说明 | 未修改契约、运行时配置或Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-06
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：输入边界修复、测试、文档与Git闭环 | 恢复Git/远端/任务板/日志；先以失败测试复现；限定对齐既有DB约束且不改公共契约；同步强制记录 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：application、真实HTTP、PostgreSQL字符语义及全量回归 | 保留修复前数据库异常/HTTP500；记录最终组合36、Unicode定向21、默认18、全量161的输出与退出码 | APPLIED；TE-20261128-06 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立修复提交 | fetch确认功能分支0 behind；GitHub网络核验失败如实记录；只暂存本单元，执行完整diff/敏感信息/空白门禁；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：application校验仅对齐V4既有`varchar(128)`，未改变公开API/DB/ENUM/流程 | API契约未明示上限登记R6-14，留待另一成员Review；未修改契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。

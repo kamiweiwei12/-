@@ -622,3 +622,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 提交门禁 | 完整审查10个暂存文件（140新增/5删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
 | 契约/迁移 | 仅测试与部署文档，无公开API/DTO/状态/错误码、DB/ENUM/流程或Flyway变更；`contract-change`不适用 |
 | 剩余 | 真实部署拓扑确定后补TLS/代理验收；R6-08/R6-11继续等待Review |
+
+## OP-20261128-06：支付幂等键长度门禁
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 18:54–19:03 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + FIX + TEST + DOC + GIT |
+| 用户授权 | 同意继续后续工作，不等待 `Janovo2117` Review |
+| 启动状态 | `feature/database-core` / `0dd183f`；工作树干净；fetch后功能分支0/0、相对develop ahead21/behind0；GitHub只读核验因网络连接失败未取得新状态 |
+| 范围 | 既有支付HTTP的幂等键输入长度/数据库边界；不修改公开契约、V4迁移、认证、前端或代理配置 |
+| 实施 | `SimulatePaymentCommand`以code point计数最多128字符，`PaymentApplicationService`在锁和写库前返回`VALIDATION_FAILED`；新增application/HTTP正反例及非BMP字符数据库语义测试 |
+| 测试 | 修复前组合36项中2项失败、退出码1并暴露数据库异常/HTTP500；修复后组合36/36、Unicode定向21/21、默认18/18、全量PostgreSQL161/161，最终均退出码0；TE-20261128-06 |
+| 发现 | R6-14：运行时校验与V4 `varchar(128)`不一致；已修复并登记。API契约未明示长度，留待Review，不在本轮擅自改公共契约 |
+| 提交门禁 | 完整审查13个暂存文件（150新增/4删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
+| 契约/迁移 | 只把application校验对齐既有数据库事实；未修改API/DB/ENUM/流程条文或Flyway；`contract-change`不适用 |
+| 剩余 | R6-08/R6-11及API长度说明继续等待Review；下一独立单元可检查已有HTTP请求体/分页大小与滥用边界 |

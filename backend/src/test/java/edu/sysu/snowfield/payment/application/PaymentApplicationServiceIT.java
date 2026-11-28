@@ -192,6 +192,29 @@ class PaymentApplicationServiceIT extends AbstractPostgresIntegrationTest {
     }
 
     @Test
+    void oversizedIdempotencyKeyIsRejectedBeforeDatabaseWrite() throws SQLException {
+        CreatedLodgingOrder order = createOrder("create-pay-long-key");
+
+        assertThatThrownBy(() -> paymentService.simulate(
+                command(order.orderId(), "k".repeat(129), "SUCCESS")))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.VALIDATION_FAILED));
+        assertThat(scalar("SELECT count(*) FROM payment")).isZero();
+    }
+
+    @Test
+    void unicodeIdempotencyKeyUsesDatabaseCharacterSemantics() throws SQLException {
+        CreatedLodgingOrder order = createOrder("create-pay-unicode-key");
+
+        PaymentResult result = paymentService.simulate(
+                command(order.orderId(), "\uD83D\uDE00".repeat(128), "FAILURE"));
+
+        assertThat(result.status()).isEqualTo("FAILED");
+        assertThat(scalar("SELECT count(*) FROM payment WHERE order_id = " + order.orderId())).isEqualTo(1);
+    }
+
+    @Test
     void concurrentSuccessWithDifferentKeysCreatesOnlyOneSuccessfulPayment() throws Exception {
         CreatedLodgingOrder order = createOrder("create-pay-concurrent");
         CountDownLatch ready = new CountDownLatch(2);
