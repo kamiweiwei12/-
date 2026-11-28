@@ -824,3 +824,21 @@
 | 全量命令/结果 | `.\\mvnw.cmd -B -Pdb test`；17个测试集，`Tests run: 172, Failures: 0, Errors: 0, Skipped: 0`；Flyway校验5个迁移、schema v5；退出码0；最后报告于20:47:33产生 |
 | 结论 | PASS：安全路由由fail-open改为fail-closed，过期调度的真实触发和占用释放已有PostgreSQL可执行证据，完整回归未受影响 |
 | 验证边界 | 调度测试验证单JVM真实触发；多JVM调度器并发仍只由已有 `SKIP LOCKED` 事务测试间接覆盖，未启动多实例调度器 |
+
+## TE-20261128-10：首批 PostgreSQL 执行计划基线
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 20:50–20:55 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `24e7d77` + 新增脚本；启动时工作树干净，相对 `origin/develop` ahead25/behind0 |
+| 环境 | Windows + Docker Desktop；`snowfield-db` PostgreSQL 16.16；隔离库 `snowfield_test`；Flyway schema v5 |
+| 脚本 | `scripts/perf-baseline.sql`；先硬校验当前库名，再事务内TRUNCATE/造数/分析，最终ROLLBACK；合成1万个资源、订单、明细、占用和支付 |
+| 首次失败 | `Get-Content -Raw scripts/perf-baseline.sql | docker exec -i snowfield-db psql -X -U snowfield -d snowfield_test`；安全门禁用 `CASE` 的不可达常量除零分支，被规划器提前求值而 `ERROR: division by zero`；退出码3；未进入BEGIN、未改数据 |
+| 第二轮诊断 | 改为 `DO ... RAISE EXCEPTION` 安全门禁后脚本退出码0并ROLLBACK。住宿查询用未显式类型的 `5000` 字面量时被解析为`integer`，规划为Seq Scan、过滤9999行、执行0.998/1.119 ms；强制诊断也只按时间区间扫全部GiST条目，说明脚本未模拟Java `long` 参数类型 |
+| 最终命令 | 同一命令，将资源ID改为 `5000::bigint`后重跑；退出码0；psql最后输出 `ROLLBACK` |
+| 过期扫描 | `ix_order_pending_expiry` Index Scan + quicksort + LockRows；100行；shared hit=105；planning 0.245 ms，execution 0.164 ms |
+| 住宿重叠 | `ex_lodging_reservation_no_overlap` 复合GiST Index Scan，Index Cond同时含 `resource_unit_id` 和 `stay_period &&`；1行；shared hit=3；planning 0.291 ms，execution 0.023 ms；禁用Seq Scan的诊断对照仍为同一索引 |
+| 支付幂等 | `ix_payment_order_id` Index Scan，按order_id定位1行后校验idempotency key；shared hit=6；planning 0.246 ms，execution 0.040 ms |
+| 回滚核验 | 脚本后只读查询：`perf-baseline@example.com` 计数0，原测试订单计数仍为1；退出码0 |
+| 结论 | PASS：三条核心查询在1万条本机合成数据下均使用现有索引；诊断过程暴露并修正了SQL字面量类型与应用JDBC bigint参数不一致的证据偏差 |
+| 验证边界 | 本轮是单连接、热缓存、合成分布的微基准，不是生产SLA、压测或优化前后对照；JMeter、冷缓存、不同基数/选择率、并发锁等待仍NOT RUN |

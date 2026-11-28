@@ -61,6 +61,7 @@
 - 模拟支付显式声明只消费/产生JSON：错误HTTP方法保留405并返回统一校验信封；`Accept: text/plain` 在进入Controller前返回无体406，避免支付已写入但客户端收到协商失败。
 - Spring Security 由未登记路由默认放行改为默认需认证；公开端点继续显式白名单，并以真实 HTTP 验证匿名未登记路由返回401、已认证返回404。
 - 新增 `OrderExpirySchedulingIT`，真实验证 `@EnableScheduling` 会触发待支付订单过期事务，并原子更新订单/明细与释放住宿占用。
+- 新增 `scripts/perf-baseline.sql`：仅允许运行于 `snowfield_test`，在事务内生成1万条订单/占用/支付后对过期扫描、住宿重叠和支付幂等查询执行 `EXPLAIN (ANALYZE, BUFFERS)`，最终 `ROLLBACK`。
 - 新增 `V5__lodging_reservation.sql`：`lodging_reservation` 与 `lodging_reservation_status_history`；落地契约核心的住宿时间排斥约束 `EXCLUDE USING gist (resource_unit_id WITH =, stay_period WITH &&) WHERE occupancy_status IN ('HELD','CONFIRMED','IN_USE')`，`RELEASED` 排除在谓词外。
 - 新增 `LodgingExclusionConstraintIT`：12 个排斥约束语义测试（重叠/包含/首尾相接/RELEASED 释放/跨资源/空区间/无界区间/非法状态/一单一占用/级联清除）。
 - 新增 `LodgingConcurrencyIT`：**100 并发抢 1 资源**真实验证（独立连接并发），成功 1 / 冲突 99 / 无残留；另有 20 个互不重叠并发窗口全部成功的反向验证。

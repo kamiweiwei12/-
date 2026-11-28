@@ -32,7 +32,7 @@
 | EQ-01 | 装备型号/批量库存/资产迁移 | P1 | GOV-04, DB-04 | B | UNASSIGNED | TODO | BULK/ASSET约束及维修区间通过 |
 | EQ-02 | 装备租赁/取还/维修 | P1 | EQ-01 | B | UNASSIGNED | TODO | 流水、释放、维修不可租和并发测试通过 |
 | RPT-01 | 统计视图与Dashboard | P1 | BK-02, SKI-01, EQ-02 | 共同 | UNASSIGNED | TODO | 统计口径明确且源于真实业务数据 |
-| PERF-01 | JMeter和EXPLAIN优化证据 | P0 | P0功能稳定 | 共同 | UNASSIGNED | TODO | 原始结果、索引前后执行计划可复核 |
+| PERF-01 | JMeter和EXPLAIN优化证据 | P0 | P0功能稳定 | 共同 | 朱承威 | IN_PROGRESS | 首批可回滚SQL基线已覆盖过期扫描/住宿重叠/支付幂等，1万条下均走索引（TE-20261128-10）；仍需代表性数据、优化前后对照与JMeter |
 | DOC-01 | 课程报告/演示/重装验证 | P0 | 全部P0 | 共同 | UNASSIGNED | TODO | 报告≥3000字、视频、全新环境复现 |
 
 ## 领取规则

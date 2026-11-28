@@ -305,3 +305,14 @@
 | contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：只收紧默认认证策略并增加运行证据，现有公开路径与契约语义不变 | 未修改API/DB/ENUM/流程/冻结记录或Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-10
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | 本轮延续已读的 `project-governance`，复核任务板/迁移/Mapper/Git | 适用：数据库性能证据与新脚本 | 从干净提交开始，限定只做可回滚微基准，保留失败/诊断轮次，同步强制文档 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：EXPLAIN ANALYZE、缓冲区、退出码与数据回滚核验 | 记录首次门禁失败、类型诊断偏差、最终三条计划、耗时/BUFFERS与NOT RUN边界 | APPLIED；TE-20261128-10 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：独立性能证据提交 | 确认分支/HEAD/干净工作树；只暂存脚本与本轮文档；提交前完整diff/`git diff --check`；不合并或改PR/设置 | APPLIED |
+| contract-change | 本轮延续已读的 `.agents/skills/contract-change/SKILL.md` | 不适用：脚本只复制现有SQL访问模式作证据 | 未修改公共API/DB/ENUM/流程契约、Flyway或索引 | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
