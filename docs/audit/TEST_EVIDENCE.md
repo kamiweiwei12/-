@@ -607,3 +607,64 @@
 | 报告目录终检 | surefire 仅含本次12个当前测试类报告；`DIAGNOSTIC_PROBE_FINAL=ABSENT`，`OLD_CONTEXT_REPORT_FINAL=ABSENT` |
 | 结论 | PASS：R6-09/R6-10 均有独立新增 IT 和 clean 后完整 PostgreSQL 回归证据；陈旧报告误导已消除 |
 | 验证边界 | 测试库未 DROP/CREATE；本条证明 clean 构建与当前 schema 回归，不替代既有空库迁移证据；支付/取消/过期、HTTP认证、开放规则仍 NOT RUN |
+
+## TE-20261127-17：模拟支付事务、幂等与并发成功唯一
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:23–23:25 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `24fdc40` + 本轮工作区改动 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；真实 PostgreSQL 16.16 测试库，schema v5 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=PaymentApplicationServiceIT' test` |
+| 定向结果 | `Tests run: 10, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 17.300 s`；`TARGET_EXIT_CODE=0` |
+| 成功路径 | 模拟成功写一条 `SUCCEEDED/SIMULATED` 支付，金额等于订单总额；订单 `PENDING_PAYMENT→CONFIRMED`、明细 `HELD→CONFIRMED`、住宿占用 `HELD→CONFIRMED`，三类历史各写一次，订单版本递增 |
+| 失败/重试 | `FAILURE` 写 `FAILED` 且订单/明细/占用保持待支付；使用新键可再次尝试并成功 |
+| 幂等 | 同键同结果返回原支付且不重复写；同键异结果返回 `IDEMPOTENCY_CONFLICT`；成功后使用新键也返回既有成功支付，不新增记录 |
+| 权限/过期 | 非订单所有者得到 `ORDER_NOT_FOUND` 且无支付残留；已过期待支付订单得到 `ORDER_EXPIRED` 且无支付残留 |
+| 并发 | 同一订单两个不同幂等键并发模拟成功：两个调用返回同一 paymentId，恰好一个 `replayed=false`、一个 `replayed=true`；数据库仅一条 `SUCCEEDED`，三类状态历史各一条 |
+| 默认命令 | `.\mvnw.cmd -B test` |
+| 默认结果 | `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`DEFAULT_EXIT_CODE=0` |
+| 全量命令 | `.\mvnw.cmd -B -Pdb test` |
+| 全量结果 | Flyway 成功校验5个迁移；`Tests run: 124, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 53.785 s`；`FULL_DB_EXIT_CODE=0` |
+| 结论 | PASS：模拟支付 application 事务、对象所有权、幂等、状态同步及并发成功唯一均有真实 PostgreSQL 证据 |
+| 验证边界 | 未新增 HTTP 接口或认证；取消、退款、过期扫描仍 NOT RUN；测试库未 DROP/CREATE，本条不替代空库迁移证据 |
+
+## TE-20261127-18：整单取消、模拟退款与并发幂等释放
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:29–23:31 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `6ca8c05` + 本轮工作区改动 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；真实 PostgreSQL 16.16 测试库，schema v5 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=PaymentApplicationServiceIT' test` |
+| 定向结果 | `Tests run: 16, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 27.292 s`；`TARGET_EXIT_CODE=0` |
+| 待支付取消 | 订单 `PENDING_PAYMENT→CANCELLED`、明细 `HELD→CANCELLED`、住宿 `HELD→RELEASED`；三类历史各一条；无退款 |
+| 已支付取消 | 支付 `SUCCEEDED→REFUNDED`；订单/明细取消、住宿释放；支付与取消产生的两阶段历史均保留 |
+| 幂等/并发 | 重复取消返回终态且不重复写历史；两个不同键并发取消恰好一个执行、一个重放，订单及住宿历史各仅一条 |
+| 状态/权限 | 明细已 `IN_USE` 时返回 `INVALID_STATE_TRANSITION` 且成功支付、订单和占用保持原状；非所有者返回 `ORDER_NOT_FOUND` |
+| 默认命令 | `.\mvnw.cmd -B test` |
+| 默认结果 | `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`DEFAULT_EXIT_CODE=0` |
+| 全量命令 | `.\mvnw.cmd -B -Pdb test` |
+| 全量结果 | Flyway 成功校验5个迁移；`Tests run: 130, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:14 min`；`FULL_DB_EXIT_CODE=0` |
+| 结论 | PASS：整单取消、模拟退款、所有权、非法状态回滚及并发一次释放均有真实 PostgreSQL 证据 |
+| 验证边界 | 取消没有业务请求体，终态提供重放语义；当前仍要求 Idempotency-Key 非空但未新增契约外取消事件表；HTTP认证与过期扫描仍 NOT RUN |
+
+## TE-20261127-19：待支付订单过期扫描与幂等释放
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:33–23:37 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `48a5aba` + 本轮工作区改动 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；真实 PostgreSQL 16.16 测试库，schema v5 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=PaymentApplicationServiceIT' test` |
+| 定向结果 | `Tests run: 19, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 26.995 s`；`TARGET_EXIT_CODE=0` |
+| 到期断言 | 到期 `PENDING_PAYMENT` 订单转 `EXPIRED` 且版本递增；HELD 明细转 `EXPIRED`；住宿占用转 `RELEASED`；订单、明细、住宿三类历史各写一次 |
+| 幂等/过滤 | 第二次扫描返回0且不重复历史；即使 `expires_at` 已过，已支付 `CONFIRMED` 订单也不被扫描 |
+| 并发机制 | 每批最多100条，查询按订单号稳定排序并使用 `FOR UPDATE SKIP LOCKED`；与支付/取消的订单行锁互斥，多实例扫描跳过其他事务已领取行 |
+| 调度隔离 | 生产默认首次延迟/固定延迟均为60秒；测试 profile 把首次延迟设为3600000ms，集成测试直接调用服务，避免后台线程污染共享测试数据 |
+| 默认命令 | 在 `backend/` 执行 `.\mvnw.cmd -B test` |
+| 默认结果 | `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 7.593 s`；`DEFAULT_EXIT_CODE=0` |
+| 全量命令 | `.\mvnw.cmd -B -Pdb test` |
+| 全量结果 | Flyway 成功校验5个迁移；`Tests run: 133, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:19 min`；`Finished at: 2026-11-27T23:36:56+08:00`；`FULL_DB_EXIT_CODE=0` |
+| 结论 | PASS：待支付订单过期、状态历史、住宿释放、重复扫描幂等及非待支付过滤均有真实 PostgreSQL 证据 |
+| 验证边界 | 未实际等待墙钟触发调度，测试直接调用同一事务方法；未做多 JVM 实例竞争实测；测试库未 DROP/CREATE；HTTP/认证仍 NOT RUN |

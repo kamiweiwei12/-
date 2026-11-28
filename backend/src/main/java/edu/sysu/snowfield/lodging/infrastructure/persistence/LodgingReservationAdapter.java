@@ -48,6 +48,18 @@ public class LodgingReservationAdapter implements LodgingReservationPort {
         return params.reservationId;
     }
 
+    @Override
+    public void confirmForOrder(long orderId) {
+        mapper.insertConfirmHistories(orderId);
+        mapper.confirmForOrder(orderId);
+    }
+
+    @Override
+    public void releaseForOrder(long orderId, String reason) {
+        mapper.insertReleaseHistories(orderId, reason);
+        mapper.releaseForOrder(orderId);
+    }
+
     private static boolean isExclusionViolation(Throwable ex) {
         Throwable cursor = ex;
         while (cursor != null) {

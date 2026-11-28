@@ -494,3 +494,51 @@ booking/application/BookingApplicationService  (@Transactional)
 | 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志 |
 | 契约/迁移 | 只补齐已有 `resource_unit.name` → `item_name_snapshot` 数据链路；无 DB/API/ENUM/业务流程条文变化，`contract-change` 不适用 |
 | 剩余 | R6-08 开放规则待 Review；BK-02 支付/取消/过期；认证/HTTP；前端 |
+
+## OP-20261127-09：BK-02 模拟支付事务
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:17–23:30 +08:00（Asia/Taipei） |
+| 分类 | FEAT + TEST + DB + GIT |
+| 用户授权 | 明确要求继续后续任务；本轮选取可独立验证的模拟支付工作单元 |
+| 范围 | payment application/persistence、order 支付端口、lodging 确认端口及真实 PostgreSQL IT；不改公共契约、Flyway、HTTP或认证 |
+| 实施 | `FOR UPDATE` 锁定所有者订单；订单内串行支付；同键指纹校验；成功/失败记录；成功时同步订单、明细、住宿占用和三类历史 |
+| 并发防线 | 应用订单行锁保证同订单串行；数据库 `uq_payment_succeeded_per_order` 保持最终兜底；并发不同键成功测试仅一条成功支付 |
+| 测试 | 定向10/10、默认13/13、完整PostgreSQL 124/124，全部0失败/0跳过/退出码0；TE-20261127-17 |
+| Diff 门禁 | 完整审查21个 staged 文件（含全部新文件）；`git diff --cached --check` 无空白错误、退出码0，仅有既有行尾提示 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志；无新增问题需写 ISSUES |
+| 契约/迁移 | 实现既有支付契约和状态机；未改 DB/API/ENUM/流程条文，`contract-change` 不适用 |
+| 剩余 | 取消/退款、过期释放、认证HTTP入口；开放规则 R6-08；前端 |
+
+## OP-20261127-10：BK-02 整单取消与模拟退款
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:27–23:35 +08:00（Asia/Taipei） |
+| 分类 | FEAT + TEST + DB + GIT |
+| 用户授权 | 模拟支付提交后继续 BK-02 后续工作 |
+| 范围 | booking 取消编排、order 取消端口、payment 退款、lodging 整单释放及 PostgreSQL IT；不改公共契约、Flyway、HTTP或认证 |
+| 实施 | 所有者订单 `FOR UPDATE`；仅 PENDING_PAYMENT/CONFIRMED 且无 IN_USE/FULFILLED 明细可取消；成功支付改 REFUNDED；状态与历史同事务同步 |
+| 幂等 | 取消无业务请求体；订单 CANCELLED 终态直接返回重放结果，仍要求非空 Idempotency-Key；并发取消由订单行锁串行且只写一次历史 |
+| 测试 | 定向16/16、默认13/13、完整PostgreSQL 130/130，全部0失败/0跳过/退出码0；TE-20261127-18 |
+| Diff 门禁 | 完整审查20个 staged 文件（含全部新文件）；`git diff --cached --check` 无空白错误、退出码0，仅有既有行尾提示 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志；无新增问题需写 ISSUES |
+| 契约/迁移 | 实现既有整单取消/退款状态机；未改 DB/API/ENUM/流程条文，`contract-change` 不适用 |
+| 剩余 | 过期释放、认证HTTP入口；开放规则 R6-08；前端 |
+
+## OP-20261127-11：BK-02 待支付订单过期扫描
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 23:33–23:40 +08:00（Asia/Taipei） |
+| 分类 | FEAT + TEST + DB + GIT |
+| 用户授权 | 明确要求继续完成未完成任务；Review 仍异步等待，不阻塞不改契约的后续实现 |
+| 范围 | booking 过期编排、order 过期端口/持久化、Spring 定时启用及 PostgreSQL IT；不改公共契约、Flyway、HTTP或认证 |
+| 实施 | 定时事务每批领取最多100条已到期 PENDING_PAYMENT 订单；`FOR UPDATE SKIP LOCKED` 支持多实例竞争；订单/明细转 EXPIRED、住宿转 RELEASED并写三类历史 |
+| 测试隔离 | test profile 首次调度延迟1小时；IT 直接调用服务，验证到期、已确认过滤和重复扫描零写入 |
+| 测试 | 定向19/19、默认13/13、完整PostgreSQL 133/133，全部0失败/0错误/0跳过/退出码0；TE-20261127-19 |
+| Diff 门禁 | 完整审查14个 staged 文件（含4个新文件）；`git diff --cached --check` 无空白错误、退出码0 |
+| 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志；无新增问题需写 ISSUES |
+| 契约/迁移 | 实现既有 PENDING_PAYMENT→EXPIRED 与占用释放流程；未改 DB/API/ENUM/流程条文，`contract-change` 不适用 |
+| 剩余 | 认证HTTP入口；开放规则 R6-08；独立可用性查询；前端 |

@@ -45,6 +45,9 @@
 - 创建订单在读取幂等记录前获取 PostgreSQL 事务级 advisory lock，消除 `(user_id, Idempotency-Key)` 并发先查后插竞态；锁随事务自动释放。
 - 创建住宿订单在写入前校验 `resource_maintenance`：与请求半开区间重叠的 `OPEN`/`IN_PROGRESS` 维修记录阻断预订，`COMPLETED`/`CANCELLED` 不阻断。
 - 创建订单价格说明改由 Jackson 3 序列化，支持规则描述中的换行、引号、反斜杠与中文安全写入 PostgreSQL `jsonb`；订单明细名称快照改用真实 `resource_unit.name`。
+- 实现模拟支付 application 事务：按所有者锁定订单，支持支付幂等与失败后新键重试；成功时原子写入 `SUCCEEDED` 支付并同步订单、明细、住宿占用及三类状态历史；并发不同键成功请求只产生一条成功支付。
+- 实现整单取消 application 事务：待支付或尚未开始履约的已确认订单可幂等取消；已支付订单把成功支付转为 `REFUNDED`，并原子取消订单/明细、释放住宿占用及写状态历史；并发重复取消只执行一次转换。
+- 实现待支付订单过期扫描：定时批量以 `FOR UPDATE SKIP LOCKED` 领取到期订单，原子写入订单/明细 `EXPIRED` 与住宿 `RELEASED` 状态历史；重复扫描不重复转换，多实例可安全竞争。
 - 新增 `V5__lodging_reservation.sql`：`lodging_reservation` 与 `lodging_reservation_status_history`；落地契约核心的住宿时间排斥约束 `EXCLUDE USING gist (resource_unit_id WITH =, stay_period WITH &&) WHERE occupancy_status IN ('HELD','CONFIRMED','IN_USE')`，`RELEASED` 排除在谓词外。
 - 新增 `LodgingExclusionConstraintIT`：12 个排斥约束语义测试（重叠/包含/首尾相接/RELEASED 释放/跨资源/空区间/无界区间/非法状态/一单一占用/级联清除）。
 - 新增 `LodgingConcurrencyIT`：**100 并发抢 1 资源**真实验证（独立连接并发），成功 1 / 冲突 99 / 无残留；另有 20 个互不重叠并发窗口全部成功的反向验证。
@@ -75,7 +78,7 @@
 
 ### Known limitations
 
-- React 前端工程尚未创建；Spring Security/JWT、订单 HTTP API、模拟支付、取消、过期释放与状态历史尚未实现，因此还没有端到端住宿业务闭环。
-- V1~V5 与创建住宿订单 application 事务已落地；2026-11-27 执行 `mvn clean` 后在现有 PostgreSQL 16 测试库重跑 `mvn -B -Pdb test`，114 个测试通过（TE-20261127-16）。这不是空库迁移复测；维修联动已覆盖，独立可用性查询与开放规则仍未完成。
+- React 前端工程尚未创建；Spring Security/JWT 与订单 HTTP API 尚未实现；创建、模拟支付、取消/退款、过期释放目前只有 application/数据库事务，尚无认证 HTTP 入口，因此还没有端到端住宿业务闭环。
+- V1~V5 与 BK-02 application 生命周期已落地；2026-11-27 在现有 PostgreSQL 16 测试库执行 `mvn -B -Pdb test`，133 个测试通过（TE-20261127-19）。这不是空库迁移复测；维修联动已覆盖，独立可用性查询与开放规则仍未完成。
 - 默认 `mvn test` 已恢复为无数据库的 13 个单元/架构测试；数据库上下文、迁移与业务集成只在显式 `-Pdb` 下运行。
 - 公共契约 PR #2 与实现 PR #3 均无 Review、无 CI 检查结果，不能视为正式冻结或已集成；住宿排斥约束已有 100 并发数据库层证据，但尚无真实 HTTP/JMeter 性能证据。

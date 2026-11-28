@@ -19,4 +19,10 @@ public interface LodgingReservationPort {
      */
     long hold(long orderItemId, long resourceUnitId, String stayMode,
               OffsetDateTime startAt, OffsetDateTime endAt, int guestCount);
+
+    /** 支付成功后，把订单全部 HELD 住宿占用确认；同时写状态历史。 */
+    void confirmForOrder(long orderId);
+
+    /** 取消/过期时释放订单全部有效住宿占用，并写状态历史。 */
+    void releaseForOrder(long orderId, String reason);
 }
