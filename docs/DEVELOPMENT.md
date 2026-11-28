@@ -3,7 +3,7 @@
 ## 当前仓库状态（2026-11-28 更新）
 
 - 公共契约仍是 `v1.0-rc`：PR #2 可合并但为 `REVIEW_REQUIRED`，0 review，等待 `Janovo2117`；尚不能称为正式冻结。
-- 后端 S1/S2 已完成；PR #3 在 `feature/database-core` 上继续累积不依赖 Review 的实现，同样等待 Review，尚未集成到 `develop`。
+- 后端 S1/S2 及当前住宿/支付/安全已按历史提交拆为 7 层堆叠 PR：#4 基础架构 → #5 数据库/HTTP基础设施 → #6 V4/V5 schema → #7 创建订单 → #8 支付/取消/过期 → #9 JWT/部署安全 → #3 HTTP边界/性能；#4 已请求 `Janovo2117` 按顺序 review，尚未集成到 `develop`。
 - 数据库已实现 V1~V5；Spring Security/JWT 边界、Swagger/OpenAPI Bearer 声明和模拟支付 HTTP 入口已接入；支付幂等键、协议错误、错误方法及不接受JSON的内容协商均有写库前HTTP门禁；未显式白名单路由默认需认证，安全响应头与HSTS secure/HTTP分支已有过滤链验证，Swagger/OpenAPI部署默认关闭；真实 PostgreSQL `-Pdb` 回归 172 个测试通过（TE-20261128-09）。
 - BK-02 application 生命周期已完成，支付 HTTP 已验证从 JWT `sub` 获取用户并执行对象所有权/幂等检查；注册/登录、当前用户、创建/查询/取消订单 HTTP 因 DTO 契约不完整暂缓（R6-11）。BK-01 已接入维修阻断；独立可用性查询和开放规则语义仍有缺口。
 - 前端工程尚未创建。

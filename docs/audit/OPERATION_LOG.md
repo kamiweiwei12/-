@@ -703,3 +703,17 @@ booking/application/BookingApplicationService  (@Transactional)
 | 文档 | 同步CHANGELOG、DEVELOPMENT、任务板、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE和开发日志；无新的可追踪产品缺陷，ISSUES无需修改 |
 | 边界 | JMeter、代表性数据、冷缓存、高并发锁等待与优化前后对照仍NOT RUN；PERF-01保持IN_PROGRESS |
 | Git | 性能基线单元提交为 `ee250b9`；`git push origin HEAD:feature/database-core` 快进成功（`a486bf0..ee250b9`），`git ls-remote` 核对远端SHA为 `ee250b9af4f34addfc1eb24514b3e7544dd463dc`；未改PR元数据或合并 |
+
+## OP-20261128-11：后端 PR 无改史堆叠拆分
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 21:02–21:08 +08:00（Asia/Taipei） |
+| 分类 | GIT + REVIEW + INTEGRATION + DOC |
+| 用户授权 | 明确要求更新PR标题/拆分，使队友能看到最新进度，并继续后续目标 |
+| 启动状态 | `feature/database-core` / `9a903d0`；工作树干净；远端同SHA；PR #3 为+11214/-87、107文件、标题/描述仅到S1~S3 |
+| 计划 | 用历史提交检查点建7层堆叠PR，不force push/rebase/cherry-pick；每层完整写六类PR信息；只对第一层请求Review |
+| 操作 | 新建6个远端检查点分支和PR #4~#9；将PR #3 base改为 `feature/security-core`，标题改为 `fix(web): harden HTTP boundaries and add performance baseline`，重写描述为最新范围/测试/风险/回滚/Review要点 |
+| 结果 | 7层链连续，单层910~2428行新增；#4已请求`Janovo2117` Review；#2/#3原请求保留；无Review/Approve、无checks、未合并；TE-20261128-11 |
+| 回滚 | 如需取消拆分，可将#3 base改回`develop`并关闭#4~#9；本轮未改写任何commit，无代码/数据回滚 |
+| 边界 | 未代替队友Review，未合并、未改分支保护/权限/仓库设置；PR #2候选契约仍是上游Review项 |

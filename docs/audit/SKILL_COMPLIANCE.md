@@ -316,3 +316,14 @@
 | contract-change | 本轮延续已读的 `.agents/skills/contract-change/SKILL.md` | 不适用：脚本只复制现有SQL访问模式作证据 | 未修改公共API/DB/ENUM/流程契约、Flyway或索引 | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-11
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `AGENTS.md`、`.agents/skills/project-governance/SKILL.md`、DEVELOPMENT、任务板、开发/审计日志 | 适用：GitHub协作结构、多分支/多PR和队友Review入口 | 恢复Git/GitHub真实状态，计算每段diff，选择不改史堆叠方案，核对连续base/head/范围，同步强制文档 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：创建分支/PR、改base/标题/描述、请求Review | 快进发布历史checkpoint；创建#4~#9；更新#3；只请求#4 reviewer；不force push/合并/改设置 | APPLIED；TE-20261128-11 |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：PR元数据、diff规模、review request和连续性验证 | 记录`gh pr list/view`实测值与验证边界；明确0 review/0 checks不写成PASS | APPLIED；TE-20261128-11 |
+| contract-change | 未重读（本轮不适用） | 不适用：只改PR组织和元数据，未修改契约内容/版本状态 | 所有PR描述如实声明契约/迁移影响，未将v1.0-rc写成已冻结 | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。

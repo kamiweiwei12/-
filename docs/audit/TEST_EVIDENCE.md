@@ -842,3 +842,18 @@
 | 回滚核验 | 脚本后只读查询：`perf-baseline@example.com` 计数0，原测试订单计数仍为1；退出码0 |
 | 结论 | PASS：三条核心查询在1万条本机合成数据下均使用现有索引；诊断过程暴露并修正了SQL字面量类型与应用JDBC bigint参数不一致的证据偏差 |
 | 验证边界 | 本轮是单连接、热缓存、合成分布的微基准，不是生产SLA、压测或优化前后对照；JMeter、冷缓存、不同基数/选择率、并发锁等待仍NOT RUN |
+
+## TE-20261128-11：后端堆叠 PR 拆分与元数据核验
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 21:02–21:08 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `9a903d0`；启动与GitHub操作后本地工作树干净；远端功能分支同SHA |
+| 原始状态 | PR #3 base=`develop`、head=`feature/database-core`，27个提交、107个文件、+11214/-87，标题仍称S1/S2；`REVIEW_REQUIRED`、0 review、0 checks |
+| 方法 | 不cherry-pick、不force push、不改写历史；将现有提交 `d59c796/f7c3ae3/ee3606b/24fdc40/97818a0/0dd183f` 发布为检查点分支，创建6个中间PR，将原#3改为最终层 |
+| 链路 | #4 `develop→backend-foundation` → #5 `backend-foundation→backend-infrastructure` → #6 `backend-infrastructure→database-schema` → #7 `database-schema→booking-core` → #8 `booking-core→booking-lifecycle` → #9 `booking-lifecycle→security-core` → #3 `security-core→database-core` |
+| Diff核验 | #4 +1743/-54/27文件；#5 +1669/-28/26；#6 +1369/-2/11；#7 +2428/-36/31；#8 +1512/-7/33；#9 +1648/-15/29；#3 +910/-10/19；七层base/head连续 |
+| 描述核验 | #4~#9均含目标、堆叠依赖、范围、契约/迁移影响、真实测试证据、风险/未完成、回滚与Review要点；#3追加完整review顺序和172/172最新回归 |
+| Review请求 | #4 显式请求 `Janovo2117`；#2/#3原有请求保留；未一次向队友发送7个并行review请求 |
+| 结论 | PASS：GitHub实测显示7层堆叠PR范围连续，原#3标题、base和描述已与最新内容一致，且无历史改写/合并/分支删除 |
+| 验证边界 | 本证据验证PR结构/元数据，不代表队友已Review/Approve；当前status checks仍无结果，不宣称CI PASS |
