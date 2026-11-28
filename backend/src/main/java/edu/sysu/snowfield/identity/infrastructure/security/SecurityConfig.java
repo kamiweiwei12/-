@@ -33,6 +33,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -41,6 +43,19 @@ import org.springframework.web.filter.CorsFilter;
 @Configuration
 @EnableConfigurationProperties(SnowfieldSecurityProperties.class)
 public class SecurityConfig {
+
+    private static final String CONTENT_SECURITY_POLICY = String.join("; ",
+            "default-src 'self'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data:",
+            "font-src 'self' data:",
+            "object-src 'none'",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "form-action 'self'");
+
+    private static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=()";
 
     private static final String[] PUBLIC_DOCS = {
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
@@ -51,6 +66,12 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
+                .headers(headers -> {
+                    headers.contentSecurityPolicy(csp -> csp.policyDirectives(CONTENT_SECURITY_POLICY));
+                    headers.referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.NO_REFERRER));
+                    headers.addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", PERMISSIONS_POLICY));
+                    headers.frameOptions(frame -> frame.deny());
+                })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_DOCS).permitAll()

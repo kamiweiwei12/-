@@ -4,7 +4,7 @@
 
 - 公共契约仍是 `v1.0-rc`：PR #2 可合并但为 `REVIEW_REQUIRED`，0 review，等待 `Janovo2117`；尚不能称为正式冻结。
 - 后端 S1/S2 已完成；PR #3 在 `feature/database-core` 上继续累积不依赖 Review 的实现，同样等待 Review，尚未集成到 `develop`。
-- 数据库已实现 V1~V5；Spring Security/JWT 边界、Swagger/OpenAPI Bearer 声明和模拟支付 HTTP 入口已接入；真实 PostgreSQL `-Pdb` 回归 153 个测试通过（TE-20261128-03）。
+- 数据库已实现 V1~V5；Spring Security/JWT 边界、Swagger/OpenAPI Bearer 声明和模拟支付 HTTP 入口已接入；安全响应头已覆盖真实HTTP，Swagger/OpenAPI部署默认关闭；真实 PostgreSQL `-Pdb` 回归 155 个测试通过（TE-20261128-04）。
 - BK-02 application 生命周期已完成，支付 HTTP 已验证从 JWT `sub` 获取用户并执行对象所有权/幂等检查；注册/登录、当前用户、创建/查询/取消订单 HTTP 因 DTO 契约不完整暂缓（R6-11）。BK-01 已接入维修阻断；独立可用性查询和开放规则语义仍有缺口。
 - 前端工程尚未创建。
 - 默认测试保持无数据库构建：18 个单元/架构/安全配置测试通过；数据库上下文门禁仅在 `-Pdb` 运行（TE-20261128-02）。
@@ -20,6 +20,8 @@ Copy-Item .env.example .env
 # 启动后端前必须在当前终端/IDE注入真实值；不要把真实密钥提交到 .env.example。
 $env:SNOWFIELD_DB_PASSWORD = "<local-db-password>"
 $env:SNOWFIELD_JWT_SECRET = "<at-least-32-random-bytes>"
+# 仅在受控本地环境需要接口文档时开启；部署默认 false。
+$env:SNOWFIELD_OPENAPI_ENABLED = "true"
 
 # 2. 启动数据库（映射 5433 -> 容器 5432）
 docker compose up -d db
@@ -38,6 +40,7 @@ Pop-Location
 
 - 开发库 `snowfield`、测试库 `snowfield_test` 分离，测试不得污染开发库。
 - 密码只通过环境变量 `SNOWFIELD_DB_PASSWORD` 注入，不写入仓库。
+- `SNOWFIELD_OPENAPI_ENABLED` 默认 `false`；只有受控本地开发需要 Swagger 时才设为 `true`。
 - 测试库证据见 `docs/audit/TEST_EVIDENCE.md` TE-20261126-16。
 
 ## 建议工程初始化（第二阶段）

@@ -3,6 +3,7 @@ package edu.sysu.snowfield.support;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -49,6 +50,11 @@ class WebContractIT {
         assertThat(response.getHeaders().getContentType())
                 .isNotNull()
                 .satisfies(type -> assertThat(type.isCompatibleWith(MediaType.APPLICATION_JSON)).isTrue());
+        assertSecurityHeaders(response.getHeaders());
+        assertThat(response.getHeaders().getFirst(HttpHeaders.CACHE_CONTROL))
+                .contains("no-cache", "no-store", "max-age=0", "must-revalidate");
+        assertThat(response.getHeaders().getFirst(HttpHeaders.PRAGMA)).isEqualTo("no-cache");
+        assertThat(response.getHeaders().getFirst(HttpHeaders.EXPIRES)).isEqualTo("0");
 
         JsonNode body = JSON.readTree(response.getBody());
         assertThat(body.get("success").asBoolean()).as("契约 §1：success 必须为 true").isTrue();
@@ -140,5 +146,18 @@ class WebContractIT {
                 .isNotNull()
                 .satisfies(type -> assertThat(type.isCompatibleWith(MediaType.TEXT_HTML)).isTrue());
         assertThat(response.getBody()).containsIgnoringCase("swagger ui");
+        assertSecurityHeaders(response.getHeaders());
+        assertThat(response.getHeaders().getFirst(HttpHeaders.CACHE_CONTROL)).isEqualTo("no-store");
+    }
+
+    private static void assertSecurityHeaders(HttpHeaders headers) {
+        assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
+        assertThat(headers.getFirst("X-Frame-Options")).isEqualTo("DENY");
+        assertThat(headers.getFirst("Referrer-Policy")).isEqualTo("no-referrer");
+        assertThat(headers.getFirst("Permissions-Policy"))
+                .isEqualTo("camera=(), microphone=(), geolocation=()");
+        assertThat(headers.getFirst("Content-Security-Policy"))
+                .contains("default-src 'self'", "object-src 'none'", "frame-ancestors 'none'",
+                        "base-uri 'self'", "form-action 'self'");
     }
 }

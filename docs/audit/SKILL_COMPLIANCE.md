@@ -239,3 +239,14 @@
 | contract-change | 未读取（本轮不适用） | 不适用：只描述现有Bearer认证，不改变公开路径、DTO、状态、错误或数据库 | 未修改契约或Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-04
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：运行时安全配置、测试及文档同步 | 恢复Git/远端/任务板/开发日志；限定不改契约/迁移；登记R6-13并完成测试、完整diff与文档闭环 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：真实HTTP响应头、文档启用/禁用与全量回归 | 如实保留编译/API与缓存断言失败；记录定向8、默认18、全量155的输出、退出码和NOT RUN边界 | APPLIED；TE-20261128-04 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立安全提交 | fetch确认0 behind；仅暂存本单元；提交前完整diff/敏感信息/`git diff --check`；不合并、不改仓库设置 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：只改部署开关和响应头，不改变公开API/DB/ENUM/业务流程 | 未修改契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。

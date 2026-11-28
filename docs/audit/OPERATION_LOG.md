@@ -590,3 +590,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 提交门禁 | 完整审查11个暂存文件（149新增/4删除）；敏感信息扫描无命中；`git diff --cached --check` 无输出、退出码0 |
 | 契约/迁移 | 只同步既有认证事实到OpenAPI，不修改API字段/路径/错误码、DB/ENUM/流程或Flyway；`contract-change`不适用 |
 | 剩余 | 尚无登录取token闭环（R6-11）；未做人机浏览器点击测试 |
+
+## OP-20261128-04：安全响应头与文档暴露门禁
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 08:24–08:32 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + CONFIG + TEST + GIT |
+| 用户授权 | 明确同意继续下一项，不等待 `Janovo2117` Review |
+| 启动状态 | `feature/database-core` / `e7e5d4e`；工作树干净；fetch后功能分支0/0、相对develop ahead19/behind0 |
+| 范围 | 运行时安全响应头、Swagger/OpenAPI部署默认关闭、启用/禁用真实HTTP测试；不改业务API、DB/ENUM/Flyway或前端 |
+| 实施 | 保留Spring默认cache/nosniff/HSTS逻辑；显式CSP、Referrer/Permissions Policy、DENY；文档仅由 `SNOWFIELD_OPENAPI_ENABLED=true` 开启，test profile显式开启 |
+| 测试 | 首次编译与首次缓存断言失败均保留；最终定向8/8、默认18/18、完整PostgreSQL155/155，均0失败/0错误/0跳过、退出码0；TE-20261128-04 |
+| 发现 | R6-13：部署默认暴露文档且浏览器纵深响应头不完整；已修复并登记；HSTS因本轮仅HTTP未断言 |
+| 提交门禁 | 完整审查15个暂存文件（208新增/4删除，含新增IT）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0；不合并PR |
+| 契约/迁移 | 未修改公开路径/DTO/状态/错误码、DB/ENUM/流程或Flyway；`contract-change`不适用 |
+| 剩余 | R6-08/R6-11继续等待Review；反向代理响应头覆盖、HTTPS HSTS及浏览器CSP控制台仍NOT RUN |

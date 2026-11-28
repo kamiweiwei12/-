@@ -724,3 +724,20 @@
 | 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 153, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:16 min`；`Finished at: 2026-11-28T01:07:26+08:00`；退出码0 |
 | 结论 | PASS：Swagger UI与OpenAPI真实输出可表达现有JWT认证，且未把公开接口误标为全局认证 |
 | 验证边界 | 未进行浏览器人工点击Authorize；测试验证生成文档结构和UI页面可访问，不验证尚未实现的登录取token流程 |
+
+## TE-20261128-04：安全响应头与部署默认关闭 Swagger
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 08:27–08:31 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `e7e5d4e` + 本轮工作区改动；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead19/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3；Spring Security 7.1.3；真实 PostgreSQL 16.16测试库，schema v5 |
+| 首次默认失败 | `.\mvnw.cmd -B test` 首次编译失败：Spring Security 7 的 `permissionsPolicy` 已弃用且链式调用停留在子配置，`frameOptions` 无法解析；`BUILD FAILURE`，退出码1。改用 `StaticHeadersWriter` 并拆分配置后复测18/18 PASS |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 9.048 s`；退出码0 |
+| 定向首次失败 | `.\mvnw.cmd -B -Pdb '-Dtest=WebContractIT,SwaggerDisabledWebIT' test`：禁用文档2项先通过，Swagger启用场景因静态资源实际仅返回 `Cache-Control: no-store`，原断言错误要求动态API的四项指令而1项失败；总计8项、1失败、退出码1 |
+| 定向最终结果 | 同命令复测；`Tests run: 8, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 14.151 s`；退出码0 |
+| 响应头断言 | 健康API含 `no-cache, no-store, max-age=0, must-revalidate`、`Pragma: no-cache`、`Expires: 0`；Swagger静态页含`no-store`；两者均含CSP、`nosniff`、`DENY`、`no-referrer`及禁用摄像头/麦克风/定位策略 |
+| 文档暴露断言 | test profile显式开启时OpenAPI与Swagger保持200；覆盖关闭属性的新上下文中 `/v3/api-docs` 与 `/swagger-ui/index.html` 均真实返回404；部署默认值由 `SNOWFIELD_OPENAPI_ENABLED:false` 控制 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 155, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:19 min`；`Finished at: 2026-11-28T08:30:55+08:00`；退出码0 |
+| 结论 | PASS：运行时响应头、动态/静态缓存策略、文档显式启用与默认关闭均有真实HTTP证据；修复前失败如实保留 |
+| 验证边界 | HSTS只在HTTPS响应发送，本轮内嵌服务器为HTTP故未断言；未验证反向代理覆盖响应头，也未进行浏览器人工CSP控制台检查；测试库未DROP/CREATE |

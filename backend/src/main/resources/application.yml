@@ -49,3 +49,10 @@ snowfield:
     issuer: https://snowfield.local
     access-token-ttl: 30m
     allowed-origin: ${SNOWFIELD_CORS_ALLOWED_ORIGIN:http://localhost:5173}
+
+# 部署环境默认不暴露接口文档；本地按需显式开启，避免误把管理面信息公开到生产。
+springdoc:
+  api-docs:
+    enabled: ${SNOWFIELD_OPENAPI_ENABLED:false}
+  swagger-ui:
+    enabled: ${SNOWFIELD_OPENAPI_ENABLED:false}

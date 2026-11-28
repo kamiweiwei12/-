@@ -53,6 +53,8 @@
 - 新增 `SecurityPaymentWebIT` 14项真实服务器/PostgreSQL测试，覆盖令牌签名/过期/issuer/claims、错误签名、角色边界、BCrypt、CORS、Owner、支付幂等及输入校验。
 - 安全配置改为 fail-fast：拒绝相对或非 HTTP(S) issuer、通配/非 HTTP/带路径 CORS Origin，以及缺失、占位或过短密钥和非法 token TTL；新增 5 项无数据库配置单元测试。
 - OpenAPI 新增 `bearerAuth` HTTP Bearer/JWT 安全方案；模拟支付操作显式引用该方案，公开健康接口保持无认证标记；Swagger UI 页面与生成文档均有真实 HTTP 测试。
+- Web 安全响应增加 CSP、`Referrer-Policy: no-referrer`、Permissions Policy、`X-Frame-Options: DENY`，并验证默认缓存防护与 `nosniff`；Swagger/OpenAPI 在部署配置中默认关闭，仅由 `SNOWFIELD_OPENAPI_ENABLED=true` 显式开启。
+- 新增 `SwaggerDisabledWebIT`，真实验证关闭配置下 `/v3/api-docs` 与 `/swagger-ui/index.html` 均返回404；与启用场景组合8项通过。
 - 新增 `V5__lodging_reservation.sql`：`lodging_reservation` 与 `lodging_reservation_status_history`；落地契约核心的住宿时间排斥约束 `EXCLUDE USING gist (resource_unit_id WITH =, stay_period WITH &&) WHERE occupancy_status IN ('HELD','CONFIRMED','IN_USE')`，`RELEASED` 排除在谓词外。
 - 新增 `LodgingExclusionConstraintIT`：12 个排斥约束语义测试（重叠/包含/首尾相接/RELEASED 释放/跨资源/空区间/无界区间/非法状态/一单一占用/级联清除）。
 - 新增 `LodgingConcurrencyIT`：**100 并发抢 1 资源**真实验证（独立连接并发），成功 1 / 冲突 99 / 无残留；另有 20 个互不重叠并发窗口全部成功的反向验证。
@@ -84,6 +86,6 @@
 ### Known limitations
 
 - React 前端工程尚未创建；JWT 校验和模拟支付 HTTP 已实现，但注册/登录、当前用户、创建/查询/取消订单 HTTP DTO 仍缺明确契约并等待 Review（R6-11），因此还没有可由用户登录进入的端到端住宿闭环。
-- V1~V5、BK-02 application 生命周期及支付 HTTP 已落地；2026-11-28 在现有 PostgreSQL 16 测试库执行 `mvn -B -Pdb test`，153 个测试通过（TE-20261128-03）。这不是空库迁移复测；独立可用性查询与开放规则仍未完成。
+- V1~V5、BK-02 application 生命周期及支付 HTTP 已落地；2026-11-28 在现有 PostgreSQL 16 测试库执行 `mvn -B -Pdb test`，155 个测试通过（TE-20261128-04）。这不是空库迁移复测；独立可用性查询与开放规则仍未完成。
 - 默认 `mvn test` 为无数据库的 18 个单元/架构/安全配置测试；数据库上下文、迁移与业务集成只在显式 `-Pdb` 下运行。
 - 公共契约 PR #2 与实现 PR #3 均无 Review、无 CI 检查结果，不能视为正式冻结或已集成；住宿排斥约束已有 100 并发数据库层证据，但尚无真实 HTTP/JMeter 性能证据。
