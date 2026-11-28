@@ -210,3 +210,31 @@ git diff -- <contract files>
 
 - 本段全部改动作为**单个提交**进入 `feature/collaboration-prep`，不再拆分为“内容提交+证据回填提交”，以避免重复 P3-1 指出的“一个可审查单元被拆成多个提交”。
 - 提交 SHA 与推送状态不写入文件（提交对象无法在自身内容中自引用），以 `git log -1` 和本轮任务报告为准。
+
+## OP-20261126-03：按架构审查意见修订设计并建立 S1 工程骨架
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 22:05–22:25 +08:00（Asia/Shanghai） |
+| 任务 | 理解项目负责人架构审查意见，修订架构设计文档（C2 分层/C3 模块/数据所有权/安全/事务/时间/测试/版本），并执行 S1 工程骨架 |
+| 分支 | `feature/database-core`，开始 HEAD `3404221`（== origin/develop）；开始工作区含未跟踪 `.env.example`、`backend/`、`docker-compose.yml` |
+| 修改/新增文件 | 修改 `docs/ARCHITECTURE.md`、`CHANGELOG.md`；重写未跟踪的 `backend/pom.xml`、`backend/src/**`；新增 `backend/mvnw`、`backend/.mvn/wrapper/`、`backend/src/test/**/architecture/ArchitectureTest.java` |
+| 操作 | 核实 Boot 4.1.3 与 mybatis-spring-boot-starter 4.1.0 官方兼容；用缓存 Maven 3.9.16 生成 Maven Wrapper；`./mvnw -B test` 真实构建（首次 ArchUnit 空规则失败，修复后重跑通过）；执行 `git diff --check` |
+| Skill | `contract-change` 不适用（仅改 ARCHITECTURE 设计文档，未改 DB/API/ENUM 三份契约）；`git-pr`、`test-evidence` 应用；详见 `SC-20261126-03` |
+| 测试 | `./mvnw -B test`：Spring Boot 4.1.3 上下文加载 + 14 测试通过（首次 4 条 ArchUnit 分层规则因 S1 无 domain/api/infrastructure 包触发 `failOnEmptyShould`，加 `.allowEmptyShould(true)` 后全绿）；业务/数据库/MyBatis/并发测试 NOT RUN |
+| 结果 | 架构设计 v2 已落盘（ADR-006~012）；S1 骨架可复现构建；未创建业务迁移（契约冻结 PR #2 未合并）；提交与推送结果以 git 历史为准 |
+| 风险 | MyBatis 4.1.0/Flyway/PostgreSQL 尚未接入验证；`docker-compose.yml`/`.env.example` 保留为未跟踪（属 S2 DB 环境）；本地 `develop` 落后 origin/develop 12 提交（本次未触碰） |
+
+## OP-20261126-04：建立项目级工程治理 Skill 与开发日志入口
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 22:47–22:5x +08:00（Asia/Shanghai） |
+| 任务 | 按任务书建立项目级工程治理 Skill，并让 `AGENTS.md` 每轮强制触发；建立开发日志入口 |
+| 分支 | `feature/database-core`，开始 HEAD `2bce281`；工作区含未跟踪 `.env.example`、`.workbuddy/`、`docker-compose.yml` |
+| 修改文件 | 新增 `.agents/skills/project-governance/SKILL.md`、`references/document-sync-matrix.md`、`docs/development-log/2026-11.md`；修改 `AGENTS.md`、`CHANGELOG.md`、`docs/audit/*` |
+| 操作 | 调查状态（branch/HEAD/status/gh pr/issue）；创建 Skill 与 reference；改 `AGENTS.md` §0；建开发日志；`git diff --check` |
+| Skill | `project-governance`（本轮新建并自举）；`git-pr`、`test-evidence` 应用；`contract-change` 不适用（未改契约）；详见 `SC-20261126-04` |
+| 测试 | `git diff --check` 退出码 0；无业务/数据库/并发测试（文档治理任务，NOT NEEDED） |
+| 结果 | 治理 Skill 落盘并通过 `AGENTS.md` 强制触发；开发日志入口建立；未触碰业务/契约/数据库/GitHub 权限 |
+| 风险 | 无业务风险；未推送、未建 PR、未合并（等人工审查） |

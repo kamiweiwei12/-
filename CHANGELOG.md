@@ -20,6 +20,10 @@
 - 新增 `OccupancyStatus`（`HELD/CONFIRMED/IN_USE/RELEASED`）与 `VerificationResult`（`ACCEPTED/REJECTED`）两个公共枚举。
 - 新增 `.gitattributes`（`* text=auto eol=lf`），消除跨平台行尾警告；未对历史文件执行 renormalize。
 - 新增任务卡 GOV-06「双人协作链路打通」，并把 GOV-02 改名为「GitHub远端接入与main/develop发布」。
+- 按项目负责人架构审查意见修订架构设计 v2：模块内四层（api/application/domain/infrastructure.persistence）+ 依赖倒置，新增 ArchUnit 强制依赖规则 R1~R13（ADR-006）。
+- 重组为 11 个业务模块（identity/catalog/pricing/booking/order/payment/lodging/winter-activity/rental/verification/reporting），以 `booking` 为唯一编排中心，消除 order↔资源模块循环依赖；新增数据所有权表与安全架构（ADR-007~ADR-010）。
+- 建立后端 S1 工程骨架：Maven Wrapper 3.9.16、Spring Boot 4.1.3、common 统一响应/错误码/全局异常、ArchUnit 架构测试。
+- 建立项目级工程治理 Skill `.agents/skills/project-governance/`（每轮启动机制、文档同步、开发日志、Git/GitHub、队友协作、测试证据、结束闭环），并在 `AGENTS.md` 强制每轮触发。
 
 ### Changed
 
@@ -37,8 +41,11 @@
 - 核销新增部分唯一索引 `UNIQUE(token_id) WHERE result='ACCEPTED'`，把“同一令牌至多一次成功”下沉到数据库（D-004）。
 - 修正 `API_CONTRACT` 中住宿 `quantity` 的歧义表述：`LodgingSelection` 不提供 `quantity`，房间数量由数组长度表达。
 - `contract-change` Skill 的第5步由“四份事实源”改为8项显式消费者清单，防止ER文档漏同步。
+- 技术栈基线由 Spring Boot 3.4.5 迁移到 4.1.3（Boot 3.4/3.5 已 EOL；mybatis-spring-boot-starter 4.1.0 官方对应 Boot 4.1，待 S3 接入验证）。
+- `docs/ARCHITECTURE.md` 追加 ADR-006~ADR-012 并重构模块/依赖/安全/时间/测试章节，保留 ADR-001~005 原文。
 
 ### Known limitations
 
-- 尚未创建 Spring Boot、React 工程和正式 Flyway 业务迁移。
-- 尚无可运行系统，因此没有功能、并发或性能测试结果。
+- 后端 Spring Boot 骨架已建立；React 前端工程与正式 Flyway 业务迁移尚未创建。
+- 后端 S1 骨架已通过 Spring Boot 4.1.3 真实构建（14 测试全绿）；MyBatis 4.1.0/Flyway/PostgreSQL 尚未接入，待 S2/S3 验证。
+- 尚无可运行业务，因此没有功能、并发或性能测试结果。

@@ -219,3 +219,38 @@
 | 占用状态流转测试 | NOT RUN | 无实现 |
 | Spring Boot/Java 编译与 JUnit | NOT RUN | 仓库无后端工程 |
 | React lint/build | NOT RUN | 仓库无前端工程 |
+
+## TE-20261126-10：S1 工程骨架真实构建（含一次失败后修复）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 22:21–22:22 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `3404221` |
+| 环境 | Windows Git Bash；JDK 21.0.12；Maven Wrapper 3.9.16（`distributionType=only-script`） |
+| 命令 | `./mvnw -B test`（backend 目录） |
+| 第一次输出摘要 | Spring Boot 4.1.3 上下文加载成功（`Started SnowfieldApplicationTests`）；`SnowfieldApplicationTests`/`ApiResponseTest`/`GlobalExceptionHandlerTest` 通过；`ArchitectureTest` 4 条分层规则（R5/R7/R8/R9）因 S1 无 `domain/api/infrastructure.persistence` 包触发 `failOnEmptyShould` 报错 |
+| 第一次退出码 | 1（surefire 测试失败，非编译失败） |
+| 修复 | 对 4 条分层规则加 `.allowEmptyShould(true)`（S1 尚无可匹配类；业务模块创建后自动成为真约束） |
+| 第二次输出摘要 | `Tests run: 14, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 8.629 s` |
+| 第二次退出码 | 0 |
+| 结论 | PASS：证明 Spring Boot 4.1.3 + webmvc + validation + ArchUnit 在 Java 21 下真实编译与测试通过；不代表 MyBatis/Flyway/PostgreSQL 已接入（见 TE-20261126-11） |
+
+## TE-20261126-11：尚未运行
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| MyBatis 4.1.0 集成 | NOT RUN | S3 才接入，尚未加入 pom |
+| Flyway/PostgreSQL 迁移 | NOT RUN | 契约冻结（PR #2）未完成，S3 才建迁移 |
+| Spring Security/JWT | NOT RUN | S4 才接入 |
+| 并发/性能测试 | NOT RUN | 无可运行业务 |
+
+## TE-20261126-12：治理 Skill 建立（文档任务）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 22:5x +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `2bce281` |
+| 命令 | `git diff --check` |
+| 输出摘要 | 无空白/冲突错误输出 |
+| 退出码 | 0 |
+| 结论 | PASS：本轮仅新增/修改文档与 Skill，无业务、数据库、并发测试需求（NOT NEEDED） |
