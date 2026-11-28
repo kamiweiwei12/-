@@ -622,3 +622,84 @@ booking/application/BookingApplicationService  (@Transactional)
 | 提交门禁 | 完整审查10个暂存文件（140新增/5删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
 | 契约/迁移 | 仅测试与部署文档，无公开API/DTO/状态/错误码、DB/ENUM/流程或Flyway变更；`contract-change`不适用 |
 | 剩余 | 真实部署拓扑确定后补TLS/代理验收；R6-08/R6-11继续等待Review |
+
+## OP-20261128-06：支付幂等键长度门禁
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 18:54–19:03 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + FIX + TEST + DOC + GIT |
+| 用户授权 | 同意继续后续工作，不等待 `Janovo2117` Review |
+| 启动状态 | `feature/database-core` / `0dd183f`；工作树干净；fetch后功能分支0/0、相对develop ahead21/behind0；GitHub只读核验因网络连接失败未取得新状态 |
+| 范围 | 既有支付HTTP的幂等键输入长度/数据库边界；不修改公开契约、V4迁移、认证、前端或代理配置 |
+| 实施 | `SimulatePaymentCommand`以code point计数最多128字符，`PaymentApplicationService`在锁和写库前返回`VALIDATION_FAILED`；新增application/HTTP正反例及非BMP字符数据库语义测试 |
+| 测试 | 修复前组合36项中2项失败、退出码1并暴露数据库异常/HTTP500；修复后组合36/36、Unicode定向21/21、默认18/18、全量PostgreSQL161/161，最终均退出码0；TE-20261128-06 |
+| 发现 | R6-14：运行时校验与V4 `varchar(128)`不一致；已修复并登记。API契约未明示长度，留待Review，不在本轮擅自改公共契约 |
+| 提交门禁 | 完整审查13个暂存文件（150新增/4删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
+| 契约/迁移 | 只把application校验对齐既有数据库事实；未修改API/DB/ENUM/流程条文或Flyway；`contract-change`不适用 |
+| 剩余 | R6-08/R6-11及API长度说明继续等待Review；下一独立单元可检查已有HTTP请求体/分页大小与滥用边界 |
+
+## OP-20261128-07：支付 HTTP 协议异常边界
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 19:24–19:32 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + FIX + TEST + DOC + GIT |
+| 用户授权 | 同意继续不依赖 `Janovo2117` Review 的后续工作 |
+| 启动状态 | `feature/database-core` / `c80ce5d`；工作树干净；fetch后功能分支0/0、相对develop ahead22/behind0；PR #3为OPEN/REVIEW_REQUIRED、0 review、0 checks |
+| 范围 | 现有模拟支付端点的畸形JSON、缺失请求体、非法路径ID与错误媒体类型；不改API契约、错误码集合、数据库/Flyway、认证或前端 |
+| 实施 | 先以真实HTTP测试四类协议错误；定位`text/plain`落入通用500后，仅为`HttpMediaTypeNotSupportedException`增加既有400 `VALIDATION_FAILED`映射，并补handler单测 |
+| 测试 | 首次沙箱数据库连接失败20 errors；允许本机测试库后修复前20项中1失败；修复后定向24/24、默认19/19、全量PostgreSQL166/166，最终均退出码0；TE-20261128-07 |
+| 发现 | R6-15：错误媒体类型被误报500；已修复并登记。其他三类协议错误原实现已正确返回400，无额外改动 |
+| 提交门禁 | 完整审查12个暂存文件（161新增/6删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
+| 契约/迁移 | 复用既有`VALIDATION_FAILED`，未新增状态/字段/错误码或修改DB/ENUM/流程/Flyway；`contract-change`不适用 |
+| 剩余 | 全局请求体字节上限、频率限制及反向代理限制仍NOT RUN；R6-08/R6-11继续等待Review |
+
+## OP-20261128-08：支付 HTTP 方法与内容协商前置门禁
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 19:40–19:49 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + FIX + TEST + DOC + GIT |
+| 用户授权 | 同意继续上一轮建议的HTTP方法与Accept协商边界 |
+| 启动状态 | `feature/database-core` / `32d7f1e`；工作树干净；fetch后功能分支0/0、相对develop ahead23/behind0；PR #3为OPEN/REVIEW_REQUIRED、0 review、0 checks |
+| 范围 | 现有模拟支付端点的错误方法和Accept内容协商；不新增端点/错误码，不改业务DTO、数据库/Flyway、认证或前端 |
+| 实施 | GET错误方法映射为标准405+既有校验信封；支付POST显式JSON consumes/produces，使不接受JSON的请求在Controller前无体406；单元与真实HTTP均覆盖零写入 |
+| 测试 | 修复前22项2失败；过渡复测27项1失败并暴露406后payment=1；最终定向28/28、默认21/21、全量PostgreSQL170/170，最终均退出码0；TE-20261128-08 |
+| 发现 | R6-16：响应内容协商发生在支付写入后，形成“客户端失败、数据库成功”；已通过映射条件前置修复。406无JSON体是Accept语义，不伪装统一信封 |
+| 提交门禁 | 完整审查13个暂存文件（168新增/7删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
+| 契约/迁移 | 只显式落实契约既有JSON媒体类型与POST方法；复用`VALIDATION_FAILED`，未新增公开字段/路径/状态或修改DB/ENUM/流程/Flyway；`contract-change`不适用 |
+| 剩余 | 请求大小、速率限制与代理改写仍NOT RUN；R6-08/R6-11继续等待Review |
+
+## OP-20261128-09：第四次审计非协作项整改
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 20:20–20:48 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + FIX + TEST + MAINTENANCE + DOC + GIT |
+| 用户授权 | 阅读第四次独立审计，暂不处理协作部分，修复其他应修项并继续推进 |
+| 启动状态 | `feature/database-core` / `a486bf0`；工作树干净；首次fetch因`.git/FETCH_HEAD`沙箱权限失败，获准后成功；相对 `origin/develop` ahead24/behind0 |
+| 范围 | 仅处理审计P1-2 fail-open与P3-1调度证据；不拆PR、不改PR描述/分支保护/本地develop，不代替Review，不改公共契约或Flyway |
+| 实施 | `SecurityConfig` 改为未显式白名单路由默认认证；`SecurityPaymentWebIT`增加匿名401/认证404；新增独立 `OrderExpirySchedulingIT` 实测调度触发的订单/明细过期及住宿释放 |
+| 测试 | 默认21/21；定向真实PostgreSQL 24/24；全量PostgreSQL 172/172；全部退出码0；沙箱Docker管道权限失败单独记录且不归因代码；TE-20261128-09 |
+| 发现 | R6-17 fail-open与R6-18缺调度真实触发证据已整改；`@EnableScheduling`原实现存在，未做无效重复配置 |
+| 契约/迁移 | 只收紧未登记路由的认证默认值并补测试；契约已有的公开白名单不变；无API/DB/ENUM/流程/Flyway变更，`contract-change` 不适用 |
+| 文档 | 同步CHANGELOG、DEVELOPMENT、任务板、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE与开发日志 |
+| 协作边界 | 按用户指示暂不处理审计中的PR #2/#3 Review、PR拆分/标题、第二作者及GitHub设置项；未将其记为解决 |
+| Git | 安全/调度单元提交为 `24e7d77`；后续与性能基线一并快进推送到 `origin/feature/database-core`，远端最终SHA `ee250b9`；未合并 |
+
+## OP-20261128-10：PERF-01 首批执行计划基线
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 20:50–20:55 +08:00（Asia/Taipei） |
+| 分类 | TEST + DB + PERFORMANCE + DOC + GIT |
+| 用户授权 | 审计非协作项修复后继续推进项目 |
+| 启动状态 | `feature/database-core` / `24e7d77`；工作树干净；相对 `origin/develop` ahead25/behind0 |
+| 范围 | 只新增测试库事务回滚型EXPLAIN脚本及证据；不改索引/迁移/契约/业务代码，不宣称生产SLA |
+| 实施 | 1万条合成资源/订单/占用/支付；`ANALYZE`后对过期锁定、住宿重叠、支付幂等查询执行 `EXPLAIN (ANALYZE, BUFFERS)`；硬校验库名并最终ROLLBACK |
+| 诊断 | 首次安全门禁因常量折叠除零失败；第二轮暴露`integer`字面量与Java long参数不一致；改`bigint`后住宿查询正确使用复合GiST |
+| 结果 | 最终退出码0；过期扫描0.164 ms、住宿重叠0.023 ms、支付幂等0.040 ms；均走索引；回滚后性能基线用户计数0；TE-20261128-10 |
+| 文档 | 同步CHANGELOG、DEVELOPMENT、任务板、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE和开发日志；无新的可追踪产品缺陷，ISSUES无需修改 |
+| 边界 | JMeter、代表性数据、冷缓存、高并发锁等待与优化前后对照仍NOT RUN；PERF-01保持IN_PROGRESS |
+| Git | 性能基线单元提交为 `ee250b9`；`git push origin HEAD:feature/database-core` 快进成功（`a486bf0..ee250b9`），`git ls-remote` 核对远端SHA为 `ee250b9af4f34addfc1eb24514b3e7544dd463dc`；未改PR元数据或合并 |

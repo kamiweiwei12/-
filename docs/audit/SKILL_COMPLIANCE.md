@@ -261,3 +261,58 @@
 | contract-change | 未读取（本轮不适用） | 不适用：仅验证既有Spring Security HSTS行为并补部署说明 | 未修改契约、运行时配置或Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-06
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：输入边界修复、测试、文档与Git闭环 | 恢复Git/远端/任务板/日志；先以失败测试复现；限定对齐既有DB约束且不改公共契约；同步强制记录 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：application、真实HTTP、PostgreSQL字符语义及全量回归 | 保留修复前数据库异常/HTTP500；记录最终组合36、Unicode定向21、默认18、全量161的输出与退出码 | APPLIED；TE-20261128-06 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立修复提交 | fetch确认功能分支0 behind；GitHub网络核验失败如实记录；只暂存本单元，执行完整diff/敏感信息/空白门禁；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：application校验仅对齐V4既有`varchar(128)`，未改变公开API/DB/ENUM/流程 | API契约未明示上限登记R6-14，留待另一成员Review；未修改契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-07
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：HTTP协议边界修复、测试、文档与Git闭环 | 恢复Git/远端/PR/任务板/日志/API；先以真实HTTP复现；限定只复用既有错误码；同步强制记录 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：单元、真实HTTP、数据库零写入及全量回归 | 保留沙箱连接失败和修复前HTTP500；记录最终定向24、默认19、全量166的输出、退出码及NOT RUN边界 | APPLIED；TE-20261128-07 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立修复提交 | fetch确认0 behind；核验PR仍待Review且无checks；仅暂存本单元并执行完整diff/敏感信息/空白门禁；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：错误媒体类型复用现有400 `VALIDATION_FAILED`，未改变公开错误码集合或业务语义 | 未修改API/DB/ENUM/流程契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-08
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：HTTP方法/协商一致性修复、测试、文档与Git闭环 | 恢复Git/远端/PR/任务板/日志/API；测试先行并保留两轮失败；限定只显式落实既有POST+JSON事实 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：真实HTTP状态、数据库副作用、单元及全量回归 | 记录修复前2失败、过渡payment=1失败、最终定向28、默认21、全量170及退出码/验证边界 | APPLIED；TE-20261128-08 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立修复提交 | fetch确认0 behind；核验PR仍待Review且无checks；仅暂存本单元并执行完整diff/敏感信息/空白门禁；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：显式声明契约已有POST与`application/json`，未新增路径、DTO、错误码或业务语义 | 未修改API/DB/ENUM/流程契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-09
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `AGENTS.md`、`.agents/skills/project-governance/SKILL.md`、DEVELOPMENT、任务板、开发/审计日志、API/架构文档 | 适用：审计整改、安全修复与调度测试 | 恢复Git/远端真实状态，限定非协作范围，先查证 `@EnableScheduling`，再做最小修复、全量回归和文档闭环 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：默认、真实HTTP/调度定向与全量PostgreSQL回归 | 记录命令、环境、沙箱Docker权限失败、退出码、断言与单JVM验证边界 | APPLIED；TE-20261128-09 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：功能分支状态恢复与本单元提交门禁 | fetch首次权限失败后获准重试；确认ahead24/behind0；完整diff/`git diff --check`/测试后只暂存本单元；不合并、不改设置 | APPLIED |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：只收紧默认认证策略并增加运行证据，现有公开路径与契约语义不变 | 未修改API/DB/ENUM/流程/冻结记录或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-10
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | 本轮延续已读的 `project-governance`，复核任务板/迁移/Mapper/Git | 适用：数据库性能证据与新脚本 | 从干净提交开始，限定只做可回滚微基准，保留失败/诊断轮次，同步强制文档 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：EXPLAIN ANALYZE、缓冲区、退出码与数据回滚核验 | 记录首次门禁失败、类型诊断偏差、最终三条计划、耗时/BUFFERS与NOT RUN边界 | APPLIED；TE-20261128-10 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：独立性能证据提交 | 确认分支/HEAD/干净工作树；只暂存脚本与本轮文档；提交前完整diff/`git diff --check`；不合并或改PR/设置 | APPLIED |
+| contract-change | 本轮延续已读的 `.agents/skills/contract-change/SKILL.md` | 不适用：脚本只复制现有SQL访问模式作证据 | 未修改公共API/DB/ENUM/流程契约、Flyway或索引 | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。

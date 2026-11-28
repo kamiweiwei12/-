@@ -7,11 +7,18 @@ public record SimulatePaymentCommand(
         String idempotencyKey,
         String desiredOutcome) {
 
+    public static final int MAX_IDEMPOTENCY_KEY_LENGTH = 128;
+
     public String normalizedOutcome() {
         return desiredOutcome == null ? null : desiredOutcome.trim().toUpperCase(java.util.Locale.ROOT);
     }
 
     public String fingerprint() {
         return "desiredOutcome=" + normalizedOutcome();
+    }
+
+    public boolean hasValidIdempotencyKeyLength() {
+        return idempotencyKey != null
+                && idempotencyKey.codePointCount(0, idempotencyKey.length()) <= MAX_IDEMPOTENCY_KEY_LENGTH;
     }
 }

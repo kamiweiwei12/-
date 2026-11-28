@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * {@link GlobalExceptionHandler} 的异常→错误响应映射单元测试（直接调用，不依赖 MockMvc）。
@@ -37,5 +38,29 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, resp.getStatusCode());
         assertEquals("INTERNAL_ERROR", resp.getBody().error().code());
+    }
+
+    @Test
+    void unsupportedMediaType_mapsToValidationFailure() {
+        ResponseEntity<ErrorResponse> resp = handler.handleUnsupportedMediaType();
+
+        assertEquals(HttpStatus.BAD_REQUEST, resp.getStatusCode());
+        assertEquals("VALIDATION_FAILED", resp.getBody().error().code());
+    }
+
+    @Test
+    void unsupportedMethod_preserves405WithValidationEnvelope() {
+        ResponseEntity<ErrorResponse> resp = handler.handleUnsupportedMethod();
+
+        assertEquals(HttpStatus.METHOD_NOT_ALLOWED, resp.getStatusCode());
+        assertEquals("VALIDATION_FAILED", resp.getBody().error().code());
+    }
+
+    @Test
+    void unacceptableResponseType_preserves406WithoutBody() {
+        ResponseEntity<Void> resp = handler.handleNotAcceptable();
+
+        assertEquals(HttpStatus.NOT_ACCEPTABLE, resp.getStatusCode());
+        assertNull(resp.getBody());
     }
 }

@@ -83,6 +83,10 @@ public class PaymentApplicationService {
         if (command == null || command.idempotencyKey() == null || command.idempotencyKey().isBlank()) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED, "Idempotency-Key 不能为空");
         }
+        if (!command.hasValidIdempotencyKeyLength()) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED,
+                    "Idempotency-Key 不能超过" + SimulatePaymentCommand.MAX_IDEMPOTENCY_KEY_LENGTH + "个字符");
+        }
         String outcome = command.normalizedOutcome();
         if (!"SUCCESS".equals(outcome) && !"FAILURE".equals(outcome)) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED,

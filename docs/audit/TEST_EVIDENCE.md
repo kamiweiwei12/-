@@ -757,3 +757,88 @@
 | GitHub只读核验 | PR #3 为OPEN，base=`develop`、head=`feature/database-core`、`REVIEW_REQUIRED`、0 review、0 checks；未合并 |
 | 结论 | PASS：应用实际Spring Security过滤链的HSTS secure/HTTP分支已有自动化证据，且完整回归未受影响 |
 | 验证边界 | 测试以Mock servlet request模拟secure属性，不是TLS握手；真实域名/CA证书、边缘代理清洗、转发头策略与外部HTTPS响应均NOT RUN；不把本证据表述为生产HTTPS已部署 |
+
+## TE-20261128-06：支付幂等键数据库长度边界
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 18:54–19:00 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `0dd183f` + 本轮工作区改动；启动时工作树干净，fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead21/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；真实 PostgreSQL 16.16测试库，Flyway schema v5 |
+| 修复前命令 | `.\mvnw.cmd -B -Pdb '-Dtest=PaymentApplicationServiceIT,SecurityPaymentWebIT' test` |
+| 修复前实测 | `Tests run: 36, Failures: 2, Errors: 0, Skipped: 0`；application负例实际抛出 `DataIntegrityViolationException`，PostgreSQL报告 `value too long for type character varying(128)`；HTTP负例实际返回500/`INTERNAL_ERROR`；`BUILD FAILURE`；退出码1。同期128字符HTTP正例已通过 |
+| 修复后组合复测 | 同命令；`PaymentApplicationServiceIT` 20/20、`SecurityPaymentWebIT` 16/16，总计36/36；`BUILD SUCCESS`；`Total time: 31.930 s`；`Finished at: 2026-11-28T18:57:28+08:00`；退出码0 |
+| Unicode数据库语义 | `.\mvnw.cmd -B -Pdb '-Dtest=PaymentApplicationServiceIT' test`；新增128个非BMP Unicode code point键真实写入成功；21/21；`BUILD SUCCESS`；`Total time: 21.717 s`；`Finished at: 2026-11-28T18:58:21+08:00`；退出码0 |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 4.749 s`；`Finished at: 2026-11-28T18:58:36+08:00`；退出码0 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 161, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:21 min`；`Finished at: 2026-11-28T19:00:07+08:00`；退出码0 |
+| 边界断言 | 128 ASCII字符经真实HTTP支付成功且仅一条payment；128非BMP Unicode字符经application成功入库；129 ASCII字符在锁/写库前抛`VALIDATION_FAILED`，真实HTTP为400且payment计数为0 |
+| 结论 | PASS：应用输入边界与既有V4 `varchar(128)`一致，异常输入不再下沉为数据库异常或HTTP 500；修复前失败如实保留 |
+| 验证边界 | 未修改API契约、V4迁移或数据库；API契约当前未明示128字符上限，是否公开补充需双人Review；未测试反向代理自身的请求头大小限制 |
+
+## TE-20261128-07：支付 HTTP 协议异常边界
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 19:26–19:30 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `c80ce5d` + 本轮工作区改动；启动时工作树干净；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead22/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3/Tomcat 11.0.27；真实 PostgreSQL 16.16测试库，Flyway schema v5 |
+| 首次环境失败 | `.\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT' test` 在沙箱内无法建立数据库连接，ApplicationContext启动失败，20项全部error，`BUILD FAILURE`，退出码1；未到达新增断言，不归因为代码 |
+| 修复前真实HTTP | 以允许本机测试库连接的同一命令重跑：`Tests run: 20, Failures: 1, Errors: 0, Skipped: 0`；畸形JSON、缺失请求体、非法路径ID均通过；`text/plain` 实际返回500 `INTERNAL_ERROR`，预期400；`BUILD FAILURE`；`Total time: 20.223 s`；退出码1 |
+| 修复后定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=GlobalExceptionHandlerTest,SecurityPaymentWebIT' test` |
+| 修复后定向结果 | 单元4/4、真实HTTP20/20，总计24/24，0失败/0错误/0跳过；`BUILD SUCCESS`；`Total time: 24.817 s`；`Finished at: 2026-11-28T19:28:36+08:00`；退出码0 |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 19, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 5.335 s`；`Finished at: 2026-11-28T19:28:47+08:00`；退出码0 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 166, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:22 min`；`Finished at: 2026-11-28T19:30:18+08:00`；退出码0 |
+| 边界断言 | 畸形JSON、缺失请求体、非法路径ID和`text/plain`均返回统一400 `VALIDATION_FAILED`，包含traceId且不泄漏内部信息；四类请求后payment均为0 |
+| 结论 | PASS：不支持的媒体类型不再落入500；既有其他协议异常路径保持稳定400，完整回归未受影响；两次失败均如实保留 |
+| 验证边界 | 仅验证现有模拟支付端点；未设置全局请求体字节上限、频率限制或代理限制，这些仍NOT RUN；未修改公开API、错误码集合、数据库或Flyway |
+
+## TE-20261128-08：支付 HTTP 方法与内容协商前置门禁
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 19:42–19:47 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `32d7f1e` + 本轮工作区改动；启动时工作树干净；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead23/behind0；PR #3 OPEN/REVIEW_REQUIRED、0 review、0 checks |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3/Tomcat 11.0.27；真实 PostgreSQL 16.16测试库，Flyway schema v5 |
+| 修复前命令 | `.\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT' test` |
+| 修复前结果 | `Tests run: 22, Failures: 2, Errors: 0, Skipped: 0`；GET错误方法实际500 `INTERNAL_ERROR`；`Accept: text/plain` 返回406但无法产生JSON信封；`BUILD FAILURE`；`Total time: 30.330 s`；退出码1 |
+| 过渡复测 | `.\mvnw.cmd -B -Pdb '-Dtest=GlobalExceptionHandlerTest,SecurityPaymentWebIT' test`；405映射修复后，406场景进一步证明响应失败时payment计数已为1而非0；总计27项、1失败；`BUILD FAILURE`；`Total time: 29.229 s`；退出码1 |
+| 最终定向结果 | 同一组合命令；handler 6/6、真实HTTP 22/22，总计28/28，0失败/0错误/0跳过；`BUILD SUCCESS`；`Total time: 28.934 s`；`Finished at: 2026-11-28T19:45:12+08:00`；退出码0 |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；最终复测 `Tests run: 21, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 16.026 s`；`Finished at: 2026-11-28T19:49:26+08:00`；退出码0 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 170, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:39 min`；`Finished at: 2026-11-28T19:47:17+08:00`；退出码0 |
+| 边界断言 | GET支付路径在Controller前返回405及`VALIDATION_FAILED`信封；不接受JSON的POST在Controller前返回无体406；两者payment均为0且无内部信息泄漏 |
+| 结论 | PASS：HTTP方法/内容协商错误不再误报500或在失败响应前产生支付副作用；两轮失败均保留 |
+| 验证边界 | 406无JSON信封是因为客户端明确拒绝`application/json`；服务端不违背Accept强行返回JSON。未测试代理层内容协商改写、请求大小或限流 |
+
+## TE-20261128-09：默认拒绝与过期调度真实触发
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 20:44–20:47 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `a486bf0` + 本轮工作区改动；fetch成功后相对 `origin/develop` ahead24/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3/Spring Security 7.1.3；真实 PostgreSQL 16.16 `snowfield_test`，Flyway schema v5 |
+| 默认命令/结果 | `backend\\mvnw.cmd -B test`；`Tests run: 21, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 11.779 s`；结束于20:44:19；退出码0 |
+| 环境检查 | 沙箱内 `docker ps` 因 Docker named pipe 权限被拒，未执行数据库测试，不归因于代码；获准后仅从现有容器配置在进程内注入密码，未输出或写入凭据 |
+| 定向命令/结果 | `.\\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT,OrderExpirySchedulingIT' test`；调度IT 1/1、安全HTTP IT 23/23，合计24/24，0失败/0错误/0跳过；退出码0 |
+| 安全断言 | 匿名请求未登记 `/api/v1/not-registered` 返回401 `AUTH_REQUIRED`；合法CUSTOMER令牌请求同路由到达MVC并返回404 `RESOURCE_NOT_FOUND`，证明是默认认证门禁而非隐藏全部未登记路由 |
+| 调度断言 | 测试不直接调用 `expireDueOrders()`；由 `@EnableScheduling` 后台任务触发，订单/明细均转 `EXPIRED`、住宿占用转 `RELEASED`，订单与住宿历史各一条；固定间隔设为1小时，避免缓存测试上下文干扰其他IT |
+| 全量命令/结果 | `.\\mvnw.cmd -B -Pdb test`；17个测试集，`Tests run: 172, Failures: 0, Errors: 0, Skipped: 0`；Flyway校验5个迁移、schema v5；退出码0；最后报告于20:47:33产生 |
+| 结论 | PASS：安全路由由fail-open改为fail-closed，过期调度的真实触发和占用释放已有PostgreSQL可执行证据，完整回归未受影响 |
+| 验证边界 | 调度测试验证单JVM真实触发；多JVM调度器并发仍只由已有 `SKIP LOCKED` 事务测试间接覆盖，未启动多实例调度器 |
+
+## TE-20261128-10：首批 PostgreSQL 执行计划基线
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 20:50–20:55 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `24e7d77` + 新增脚本；启动时工作树干净，相对 `origin/develop` ahead25/behind0 |
+| 环境 | Windows + Docker Desktop；`snowfield-db` PostgreSQL 16.16；隔离库 `snowfield_test`；Flyway schema v5 |
+| 脚本 | `scripts/perf-baseline.sql`；先硬校验当前库名，再事务内TRUNCATE/造数/分析，最终ROLLBACK；合成1万个资源、订单、明细、占用和支付 |
+| 首次失败 | `Get-Content -Raw scripts/perf-baseline.sql | docker exec -i snowfield-db psql -X -U snowfield -d snowfield_test`；安全门禁用 `CASE` 的不可达常量除零分支，被规划器提前求值而 `ERROR: division by zero`；退出码3；未进入BEGIN、未改数据 |
+| 第二轮诊断 | 改为 `DO ... RAISE EXCEPTION` 安全门禁后脚本退出码0并ROLLBACK。住宿查询用未显式类型的 `5000` 字面量时被解析为`integer`，规划为Seq Scan、过滤9999行、执行0.998/1.119 ms；强制诊断也只按时间区间扫全部GiST条目，说明脚本未模拟Java `long` 参数类型 |
+| 最终命令 | 同一命令，将资源ID改为 `5000::bigint`后重跑；退出码0；psql最后输出 `ROLLBACK` |
+| 过期扫描 | `ix_order_pending_expiry` Index Scan + quicksort + LockRows；100行；shared hit=105；planning 0.245 ms，execution 0.164 ms |
+| 住宿重叠 | `ex_lodging_reservation_no_overlap` 复合GiST Index Scan，Index Cond同时含 `resource_unit_id` 和 `stay_period &&`；1行；shared hit=3；planning 0.291 ms，execution 0.023 ms；禁用Seq Scan的诊断对照仍为同一索引 |
+| 支付幂等 | `ix_payment_order_id` Index Scan，按order_id定位1行后校验idempotency key；shared hit=6；planning 0.246 ms，execution 0.040 ms |
+| 回滚核验 | 脚本后只读查询：`perf-baseline@example.com` 计数0，原测试订单计数仍为1；退出码0 |
+| 结论 | PASS：三条核心查询在1万条本机合成数据下均使用现有索引；诊断过程暴露并修正了SQL字面量类型与应用JDBC bigint参数不一致的证据偏差 |
+| 验证边界 | 本轮是单连接、热缓存、合成分布的微基准，不是生产SLA、压测或优化前后对照；JMeter、冷缓存、不同基数/选择率、并发锁等待仍NOT RUN |
