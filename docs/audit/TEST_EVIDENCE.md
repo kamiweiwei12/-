@@ -741,3 +741,19 @@
 | 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 155, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:19 min`；`Finished at: 2026-11-28T08:30:55+08:00`；退出码0 |
 | 结论 | PASS：运行时响应头、动态/静态缓存策略、文档显式启用与默认关闭均有真实HTTP证据；修复前失败如实保留 |
 | 验证边界 | HSTS只在HTTPS响应发送，本轮内嵌服务器为HTTP故未断言；未验证反向代理覆盖响应头，也未进行浏览器人工CSP控制台检查；测试库未DROP/CREATE |
+
+## TE-20261128-05：HSTS secure/HTTP 过滤链分支
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 09:11–09:14 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `de067d6` + 本轮工作区改动；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead20/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3；Spring Security 7.1.3；真实 PostgreSQL 16.16测试库，schema v5 |
+| 首次定向失败 | `.\mvnw.cmd -B -Pdb '-Dtest=WebContractIT' test` 首次在testCompile失败：当前Boot依赖中不存在尝试使用的 `org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc`；`BUILD FAILURE`；退出码1。未增加依赖，改为直接调用应用实际 `FilterChainProxy` |
+| 定向复测 | 同命令；`WebContractIT` 8/8，0失败/0错误/0跳过；`BUILD SUCCESS`；`Total time: 13.011 s`；退出码0 |
+| HSTS断言 | secure request得到 `Strict-Transport-Security: max-age=31536000 ; includeSubDomains`；同一路径的普通HTTP request不含该头，符合Spring Security仅在HTTPS写HSTS的行为 |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 4.901 s`；退出码0 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 157, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:07 min`；`Finished at: 2026-11-28T09:14:22+08:00`；退出码0 |
+| GitHub只读核验 | PR #3 为OPEN，base=`develop`、head=`feature/database-core`、`REVIEW_REQUIRED`、0 review、0 checks；未合并 |
+| 结论 | PASS：应用实际Spring Security过滤链的HSTS secure/HTTP分支已有自动化证据，且完整回归未受影响 |
+| 验证边界 | 测试以Mock servlet request模拟secure属性，不是TLS握手；真实域名/CA证书、边缘代理清洗、转发头策略与外部HTTPS响应均NOT RUN；不把本证据表述为生产HTTPS已部署 |

@@ -606,3 +606,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 提交门禁 | 完整审查15个暂存文件（208新增/4删除，含新增IT）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0；不合并PR |
 | 契约/迁移 | 未修改公开路径/DTO/状态/错误码、DB/ENUM/流程或Flyway；`contract-change`不适用 |
 | 剩余 | R6-08/R6-11继续等待Review；反向代理响应头覆盖、HTTPS HSTS及浏览器CSP控制台仍NOT RUN |
+
+## OP-20261128-05：HSTS 与代理信任边界验证
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 09:08–09:15 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + TEST + DOC + GIT |
+| 用户授权 | 同意继续上一轮推荐的HTTPS/HSTS与部署边界验证 |
+| 启动状态 | `feature/database-core` / `de067d6`；工作树干净；fetch后功能分支0/0、相对develop ahead20/behind0；PR #3仍OPEN/REVIEW_REQUIRED、0 review、0 checks |
+| 范围 | HSTS secure/HTTP分支测试与反向代理信任边界说明；不启用转发头信任、不配置证书/域名、不改API/DB/Flyway |
+| 实施 | 扩展WebContractIT直接调用应用实际FilterChainProxy，分别模拟secure与普通请求；文档明确代理终止TLS前必须先清洗外部转发头 |
+| 测试 | 首次因不存在的Boot测试注解包编译失败并保留；修正后定向8/8、默认18/18、全量PostgreSQL157/157，最终均退出码0；TE-20261128-05 |
+| 风险边界 | 真实TLS握手、CA证书、反向代理配置和外部HTTPS仍NOT RUN；未凭空选择 `server` 转发头策略 |
+| 提交门禁 | 完整审查10个暂存文件（140新增/5删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
+| 契约/迁移 | 仅测试与部署文档，无公开API/DTO/状态/错误码、DB/ENUM/流程或Flyway变更；`contract-change`不适用 |
+| 剩余 | 真实部署拓扑确定后补TLS/代理验收；R6-08/R6-11继续等待Review |

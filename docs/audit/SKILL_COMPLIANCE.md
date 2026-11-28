@@ -250,3 +250,14 @@
 | contract-change | 未读取（本轮不适用） | 不适用：只改部署开关和响应头，不改变公开API/DB/ENUM/业务流程 | 未修改契约或Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-05
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：安全测试、部署边界文档与Git闭环 | 恢复Git/远端/任务板/日志/PR状态；限定不猜代理拓扑；执行测试、完整diff与文档同步 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：HSTS分支、默认及完整回归 | 保留首次编译失败；记录定向8、默认18、全量157的实际输出/退出码及TLS/代理NOT RUN边界 | APPLIED；TE-20261128-05 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立测试提交 | fetch确认0 behind；只读核验PR仍待Review且无checks；提交前只暂存本单元并执行完整diff/敏感信息/空白门禁；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：仅验证既有Spring Security HSTS行为并补部署说明 | 未修改契约、运行时配置或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。

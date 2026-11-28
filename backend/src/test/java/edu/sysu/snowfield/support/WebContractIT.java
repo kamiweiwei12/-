@@ -1,12 +1,16 @@
 package edu.sysu.snowfield.support;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
@@ -34,6 +38,9 @@ class WebContractIT {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private FilterChainProxy securityFilterChain;
 
     private RestClient client() {
         // Boot 4 不再自动注册 RestClient.Builder，直接创建。
@@ -148,6 +155,31 @@ class WebContractIT {
         assertThat(response.getBody()).containsIgnoringCase("swagger ui");
         assertSecurityHeaders(response.getHeaders());
         assertThat(response.getHeaders().getFirst(HttpHeaders.CACHE_CONTROL)).isEqualTo("no-store");
+    }
+
+    @Test
+    void secureRequestReceivesHstsHeader() throws Exception {
+        MockHttpServletResponse response = invokeSecurityFilterChain(true);
+
+        assertThat(response.getHeader("Strict-Transport-Security"))
+                .isEqualTo("max-age=31536000 ; includeSubDomains");
+    }
+
+    @Test
+    void plainHttpRequestDoesNotReceiveHstsHeader() throws Exception {
+        MockHttpServletResponse response = invokeSecurityFilterChain(false);
+
+        assertThat(response.getHeader("Strict-Transport-Security")).isNull();
+    }
+
+    private MockHttpServletResponse invokeSecurityFilterChain(boolean secure) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/health");
+        request.setSecure(secure);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        securityFilterChain.doFilter(request, response, (ignoredRequest, ignoredResponse) -> {
+            // 只验证 SecurityFilterChain 的响应头写入，不绕过真实安全过滤器。
+        });
+        return response;
     }
 
     private static void assertSecurityHeaders(HttpHeaders headers) {
