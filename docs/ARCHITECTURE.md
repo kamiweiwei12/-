@@ -272,7 +272,7 @@ BookingApplicationService
 | PostgreSQL JDBC | 42.7.x（BOM） | Boot 4.1 BOM 管理 | runtime |
 | Flyway | BOM 管理 + `spring-boot-starter-flyway` + `flyway-database-postgresql` | Boot 4.1 需显式 flyway starter | S3 引入 |
 | Spring Security | BOM（7.x） | Boot 4.1 管理 | S4 引入 |
-| springdoc-openapi | 3.2.x | Boot 4.x 配 3.x | S5 引入（暂缓） |
+| springdoc-openapi | **3.2.0** | 父 POM 为 Boot 4.1.2，与本项目 4.1.3 同代；**3.2.1 起父 POM 已是 Boot 4.2.0，升级前必须重新核对父 POM 的 Boot 版本**（ADR-012 禁 Boot 4.2） | S2 引入（3.2.0） |
 | ArchUnit | 1.4.1（若构建报错再升 1.5） | 独立库，JUnit 5 引擎 | S1 引入 |
 | Maven Wrapper | 3.9.16 | 本机已缓存 | S1 生成 |
 | PostgreSQL 镜像 | postgres:16-alpine | PG16 支持至 2028，容器已运行 | 保留 |

@@ -238,3 +238,89 @@ git diff -- <contract files>
 | 测试 | `git diff --check` 退出码 0；无业务/数据库/并发测试（文档治理任务，NOT NEEDED） |
 | 结果 | 治理 Skill 落盘并通过 `AGENTS.md` 强制触发；开发日志入口建立；未触碰业务/契约/数据库/GitHub 权限 |
 | 风险 | 无业务风险；未推送、未建 PR、未合并（等人工审查） |
+
+## OP-20261126-05：S2 数据库环境与 MyBatis/Flyway 接入验证
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:05–23:30 +08:00（Asia/Shanghai） |
+| 任务 | 执行上一轮盘点建议：收编游离的 compose/env 文件；接入 MyBatis 4.1.0 + Flyway + PostgreSQL，并在真实 PostgreSQL 上验证；解除 CHANGELOG「Known limitations」中的待验证项 |
+| 分支 | `feature/database-core`，开始 HEAD `d59c796`；工作区含未跟踪 `.env.example`、`.workbuddy/`、`docker-compose.yml` |
+| 用户授权 | 用户指示「除影响双方合并的内容外，不随意触发队友 Review，其余按建议执行」。本轮全部为 A 侧后端/数据库自检，不含公共契约修改，因此**不请求队友 Review、不创建 PR** |
+| 修改文件 | 新增 `scripts/test-db-init.ps1`、`backend/src/main/resources/db/migration/V1__baseline.sql`、`backend/src/test/resources/application-test.yml`、`backend/src/test/java/edu/sysu/snowfield/support/{AbstractPostgresIntegrationTest,FlywayMigrationIT}.java`、`backend/src/main/java/edu/sysu/snowfield/identity/infrastructure/persistence/{AppUserRecord,AppUserMapper}.java`、`backend/src/test/java/edu/sysu/snowfield/identity/infrastructure/persistence/AppUserMapperIT.java`；修改 `backend/pom.xml`、`backend/src/main/resources/application.yml`、`backend/src/test/java/edu/sysu/snowfield/SnowfieldApplicationTests.java`、`docker-compose.yml`、`.env.example` |
+| 操作 | 先提交命名的 compose/env 收编（`eb67a1d`）；接入依赖并真实解析（TE-13）；首次集成测试失败并定位根因（TE-14）；用原生 JDBC 探针确认端口冲突（TE-15）；改容器端口 5433 后复测全绿（TE-16） |
+| Skill | `project-governance`（启动检查/任务分类/文档同步/结束闭环）、`git-pr`（分支、提交、未推送未开 PR）、`test-evidence`（失败与复测均追加，不覆盖）；`contract-change` 不适用（未改 DB/API/ENUM 三份契约条文，V1 是其 §2「身份与权限」的落地子集） |
+| 测试 | `mvn -B -Pdb test` → 28 测试全绿，BUILD SUCCESS，退出码 0；`mvn -B test` → 14 测试全绿，退出码 0；开发库表数 0、测试库 Flyway 记录 `1|baseline|t` |
+| 结果 | MyBatis 4.1.0 + Boot 4.1.3 + PostgreSQL 16 + Flyway 12.4.0 真实链路打通；V1 基线迁移可在空测试库执行；约束反例测试通过；未触碰公共契约、未推送、未开 PR |
+| Commit | 收编提交 `eb67a1d`；本轮主线提交 SHA 以 `git log -1` 为准，不在文件内自引用 |
+| 风险 | ① 本机原生 PostgreSQL 18 占用 5432，已将容器改到 5433，其他人克隆后须同步 `.env` 的 `POSTGRES_PORT`；② `V1__baseline.sql` 只覆盖身份与权限三张表，其余契约表待 S3；③ 首次集成测试失败已保留为 TE-20261126-14，不隐藏 |
+
+### 已实际执行的关键命令
+
+```text
+git add docker-compose.yml .env.example && git commit -m "chore(db): add local postgres compose and env template"
+<wrapper-maven>/mvn.cmd -B dependency:tree
+<wrapper-maven>/mvn.cmd -B -Pdb verify          # 首次失败，见 TE-20261126-14
+java -cp postgresql-42.7.14.jar <probe>.java    # 根因确认，见 TE-20261126-15
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-db-init.ps1
+docker compose up -d db                          # POSTGRES_PORT=5433
+<wrapper-maven>/mvn.cmd -B -Pdb test            # TE-20261126-16，28 测试通过
+<wrapper-maven>/mvn.cmd -B test                 # 默认构建，14 测试通过
+git diff --check
+```
+
+### 环境事实（供后续会话复用）
+
+- 本机已运行原生 `postgresql-x64-18` 服务（`D:\PostgreSQL`），占用 `0.0.0.0:5432`。
+- 项目 PostgreSQL 容器 `snowfield-db`（`postgres:16-alpine`）映射 `5433->5432`，命名卷 `snowfield_pgdata`。
+- 数据库账号 `snowfield`，密码取 `.env.example` 占位值；开发库 `snowfield`、测试库 `snowfield_test`。
+- 集成测试必须用 `-Pdb`；默认 `./mvnw test` 不连库。
+
+## OP-20261126-06：INF-04 统一响应/异常/健康/OpenAPI 的真实 HTTP 验证
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:33–23:50 +08:00（Asia/Shanghai） |
+| 任务 | 执行 INF-04：让统一响应、全局异常、健康检查与 OpenAPI 文档在**真实启动的 HTTP 服务**上得到验证 |
+| 分支 | `feature/database-core`，开始 HEAD `cf6a77b`，工作区干净 |
+| 用户授权 | 用户指示「可以，先做吧」，按上一轮建议执行不依赖 PR #2 的 INF-04；未授权推送、未要求催队友 Review，故均未执行 |
+| 修改文件 | 修改 `backend/pom.xml`（新增 springdoc 3.2.0）、`docs/ARCHITECTURE.md`（版本矩阵修正）；新增 `backend/src/test/java/edu/sysu/snowfield/support/WebContractIT.java`；审计与日志文件 |
+| 操作 | 核查 springdoc 各版本父 POM 的 Boot 代际（TE-18）；锁定 3.2.0 并真实解析；编写 `RANDOM_PORT` 真实启动的 HTTP 契约测试；首次因 Boot 4 不提供 `RestClient.Builder` 失败，改用 `RestClient.create` 与 Jackson 3 后全绿（TE-19） |
+| Skill | `project-governance`、`git-pr`、`test-evidence` 应用；`contract-change` **边界适用**：未修改 `API_CONTRACT.md` 任何条文，仅新增对该契约的测试；`ARCHITECTURE.md` 版本矩阵修正属设计文档同步，详见下 |
+| 测试 | `mvn -B -Pdb test` → 33 测试全绿，退出码 0；`mvn -B test` → 14 测试全绿，退出码 0；首次失败保留为 TE-20261126-19 |
+| 结果 | INF-04 平台层验收达成：成功信封、错误信封、404 映射、不泄漏内部细节、OpenAPI 文档均经真实 HTTP 验证；未推送、未开 PR |
+| 风险 | ① springdoc 3.2.1 会引入 Boot 4.2，ADR-012 禁止，已在 pom 注释与版本矩阵中锁定 3.2.0 及复核要求；② 业务端点测试仍 NOT RUN，待 S4/S5 |
+
+### 关于 `docs/ARCHITECTURE.md` 的修改说明
+
+原版本矩阵写「springdoc-openapi | 3.2.x | Boot 4.x 配 3.x | S5 引入（暂缓）」。实测 3.2.1 的父 POM 为 Boot 4.2.0，与 ADR-012 冲突。本轮仅把该行的版本写实为 `3.2.0` 并注明「升级前须复核父 POM 的 Boot 版本」、状态改为「S2 已引入（3.2.0）」。这是**事实修正**，未改变任何架构决策或契约条文，不构成需队友评审的公共契约变更。
+
+## OP-20261127-01：推送 PR #3 并按 v1.0-rc 落地 DB-02/DB-03 迁移
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:53–2026-11-27 00:15 +08:00（Asia/Shanghai） |
+| 任务 | 按用户「先 3 然后 2」的顺序：先推送并开 PR，再按当前 `v1.0-rc` 写 DB-02/DB-03 迁移 |
+| 分支 | `feature/database-core`，开始 HEAD `719e92e`，ahead origin/develop 6、behind 0 |
+| 用户授权 | 明确授权推送与创建 PR（选项 3）、按 `v1.0-rc` 写迁移（选项 2） |
+| 修改/新增文件 | 新增 `V2__campground_and_resource.sql`、`V3__price_rules_and_calendar.sql`、`ResourceAndPriceConstraintIT.java`；修改 `AbstractPostgresIntegrationTest.java`（清理表清单）、审计与日志文件 |
+| 操作 | `git fetch` 核对远端；推送 feature 分支；`gh pr create` 建 PR #3；按契约 §2 写 V2/V3；空库重建后全量执行；补 21 个约束反例测试 |
+| Skill | `project-governance`、`git-pr`、`test-evidence` 应用；`contract-change` **不适用**：V2/V3 只是把既有契约结构落为 DDL，未修改 `DATABASE_CONTRACT.md` 任何条文 |
+| 测试 | `mvn -B -Pdb test`（空库）→ 54 测试全绿，退出码 0；`ResourceAndPriceConstraintIT` 21 用例全绿；首次编译错误已保留（TE-20261127-02） |
+| 结果 | PR #3 已创建（`base=develop`，6 提交，41 文件）；V1→V3 迁移在干净库全量成功；14 张表落地 |
+| 风险 | ① 迁移基于 `v1.0-rc`，若 PR #2 的评审改动契约结构，已合并的迁移不可编辑，需新迁移修正；② `R5-04` 双空语义未裁定，V3 刻意不加 CHECK；③ 住宿排斥约束要等 V4（订单域）才能真正验证 |
+
+### 推送与 PR 结果
+
+- `git push origin feature/database-core`：新分支创建成功，远端 `719e92e`；核对 ahead/behind `0 0`，`origin/develop` 保持 `3404221` 未动。
+- 推送使用 `git -c credential.helper=...` 临时注入 gh token，**未写入全局 Git 配置、未修改仓库设置**。
+- `gh pr create --base develop --head feature/database-core` → PR #3：`https://github.com/kamiweiwei12/snowfield-resort-system/pull/3`，状态 `OPEN`、`REVIEW_REQUIRED`、`mergeStateStatus=BLOCKED`（符合分支保护要求 1 个 approve）。
+
+### 迁移设计说明（重要）
+
+`price_rule` 的 `resource_type_id` 与 `stay_mode` **同时为 NULL** 的语义，在 `v1.0-rc` 与已合入的 `develop` 中均未裁定（ISSUES `R5-04` 状态 `OPEN_FOR_REVIEW`），PR #2 拟以 D-005 补充。因此 V3 **刻意不添加「至少一项非空」CHECK**：在契约裁定前把某一方语义写死进已发布迁移，会导致后续无法在不改迁移的前提下调整。`ResourceAndPriceConstraintIT.priceRuleBothNullIsCurrentlyPermitted` 固定当前实际行为，便于契约裁定后以新迁移显式变更。
+
+### 环境注意
+
+- 本机原生 PostgreSQL 18 占用 5432，项目容器映射 5433。
+- 干净库重建命令：`DROP DATABASE snowfield_test` → `CREATE DATABASE snowfield_test` → `mvn -B -Pdb test`。

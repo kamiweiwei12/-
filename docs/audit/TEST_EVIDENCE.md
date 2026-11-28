@@ -254,3 +254,136 @@
 | 输出摘要 | 无空白/冲突错误输出 |
 | 退出码 | 0 |
 | 结论 | PASS：本轮仅新增/修改文档与 Skill，无业务、数据库、并发测试需求（NOT NEEDED） |
+
+## TE-20261126-13：S2 依赖解析（MyBatis 4.1.0 / Flyway / PostgreSQL 驱动）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:09–23:10 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `eb67a1d` |
+| 环境 | Windows；JDK 21.0.12；Maven 3.9.16（Wrapper 缓存）；Maven Central 联网 |
+| 命令 | `<maven>/mvn.cmd -B dependency:tree`（backend 目录） |
+| 输出摘要 | `mybatis-spring-boot-starter:4.1.0`、`mybatis:3.5.19`、`mybatis-spring:4.1.0`、`postgresql:42.7.14`、`spring-boot-starter-flyway:4.1.3`、`flyway-core:12.4.0`、`flyway-database-postgresql:12.4.0`；`BUILD SUCCESS` |
+| 退出码 | 0 |
+| 结论 | PASS：依赖可从 Maven Central 真实解析，版本与 `docs/ARCHITECTURE.md` §7 版本矩阵一致。仅证明「可解析」，不证明运行时兼容，后者见 TE-20261126-16 |
+
+## TE-20261126-14：首次运行数据库集成测试失败（保留失败记录）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:11 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` |
+| 命令 | `mvn -B -Pdb verify` |
+| 失败摘要 | `FlywaySqlUnableToConnectToDbException` → `PSQLException`，`SQL State: 28P01`（password authentication failed for user "snowfield"）；`AppUserMapperIT` 6 errors、`FlywayMigrationIT` 9 errors |
+| 退出码 | 非 0 |
+| 根因（已定位） | 本机存在原生 PostgreSQL 18 服务（`postgresql-x64-18`，`D:\PostgreSQL`，PID 11152）监听 `0.0.0.0:5432`，与 Docker 容器端口映射冲突。Java 的 JDBC 连接实际到达本机 PG 18 实例而非容器，故密码必然不匹配。另发现 `localhost` 在 Windows 先解析为 `::1`，会命中 `pg_hba` 的 `scram-sha-256` 规则而非 `127.0.0.1` 的 `trust` 规则，加剧不一致 |
+| 处置 | 将容器端口由 5432 改为 5433（`${POSTGRES_PORT:-5433}`），JDBC URL 显式使用 `127.0.0.1:5433`；经原生 JDBC 探针确认两库均可连接。未修改、未停止本机原生 PostgreSQL 18 服务 |
+| 结论 | FAIL（保留），复测见 TE-20261126-16 |
+
+## TE-20261126-15：真实 PostgreSQL 连通性探针（根因确认）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:21 +08:00（Asia/Shanghai） |
+| 命令 | `java -cp postgresql-42.7.14.jar T3.java`（JDK 21 单文件源码模式） |
+| 输出摘要 | `OK jdbc:postgresql://127.0.0.1:5433/snowfield_test db=snowfield_test`；`OK jdbc:postgresql://127.0.0.1:5433/snowfield db=snowfield` |
+| 退出码 | 0 |
+| 结论 | PASS：5433 端口下两个库均以 `snowfield` 账号 + `.env.example` 占位密码连接成功，证明 TE-20261126-14 的 28P01 由端口冲突而非代码或配置引起 |
+
+## TE-20261126-16：S2 数据库集成测试复测（Flyway + MyBatis + 约束；含默认构建）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:22–23:24 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` |
+| 环境 | Windows；JDK 21.0.12；Maven 3.9.16；Docker 29.6.1；容器 `snowfield-db`（`postgres:16-alpine`，PostgreSQL 16.16，healthy，映射 `0.0.0.0:5433->5432`）；测试库 `snowfield_test` 由 `scripts/test-db-init.ps1` 创建 |
+| 命令 A | `mvn -B -Pdb test`（`db` profile 才包含 `*IT`） |
+| 命令 A 输出摘要 | `Migrating schema "public" to version "1 - baseline"`；`Successfully applied 1 migration to schema "public", now at version v1 (execution time 00:00.088s)`；`ArchitectureTest` 8、`ApiResponseTest` 2、`GlobalExceptionHandlerTest` 3、`AppUserMapperIT` 6、`FlywayMigrationIT` 9；合计 `Tests run: 28, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 命令 A 退出码 | 0 |
+| 命令 B | `mvn -B test`（默认构建，不连数据库） |
+| 命令 B 输出摘要 | `Tests run: 14, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 命令 B 退出码 | 0 |
+| 隔离性核对 | `snowfield`（开发库）`public` schema 表数 = `0`；`snowfield_test` 的 `flyway_schema_history` = `1|baseline|t` |
+| 结论 | PASS：证明 MyBatis 4.1.0 + Boot 4.1.3 + PostgreSQL 16 + Flyway 12.4.0 在 Java 21 下真实可用；V1 迁移在空测试库成功执行；唯一约束 `uq_app_user_email`、检查约束 `ck_app_user_email_lower`/`ck_app_user_status`、外键 `fk_user_role_user`、复合主键 `pk_user_role` 均能拒绝非法数据；失败语句不残留行；`#{}` 参数绑定生效。测试库与开发库隔离成立 |
+| 验证边界 | 本证据只覆盖 `app_user`/`role`/`user_role` 三张表与连通链路；营地/资源/价格/订单/库存等契约表 **NOT RUN**；并发、幂等、性能测试 **NOT RUN**（S3/S4 范围） |
+
+## TE-20261126-17：本任务未运行的测试
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| 并发预订 / 超卖 | NOT RUN | 无业务表与业务用例 |
+| 订单幂等 / 支付 | NOT RUN | S4 范围 |
+| Spring Security / JWT | NOT RUN | S4 范围 |
+| 前端 lint/build | NOT RUN | 本次未触碰 `frontend/` |
+| JMeter / EXPLAIN 性能 | NOT RUN | 无真实业务数据 |
+
+## TE-20261126-18：springdoc 版本兼容性核查（拒绝不匹配版本）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:36–23:38 +08:00（Asia/Shanghai） |
+| 目的 | 为 INF-04 引入 OpenAPI 文档，先核实版本与 Boot 4.1.3 同代 |
+| 方法 | 读取 Maven Central 上各版本 `springdoc-openapi-<v>.pom` 的 `parent.version` |
+| 输出摘要 | `3.0.3 -> parent Boot 4.0.5`；`3.1.1 -> parent Boot 4.1.0`；`3.2.0 -> parent Boot 4.1.2`；`3.2.1 -> parent Boot 4.2.0` |
+| 结论 | PASS（核查）：`3.2.0` 与本项目 Boot 4.1.3 同代，采用；`3.2.1` 已跳到 Boot 4.2.0，与 ADR-012「不用 Boot 4.2」冲突，**拒绝采用** |
+| 文档冲突登记 | `docs/ARCHITECTURE.md` 版本矩阵原写「springdoc 3.2.x」，未区分 3.2.0/3.2.1 的 Boot 代际差异，已在本轮修正为 3.2.0 并注明升级前须复核父 POM |
+
+## TE-20261126-19：真实 HTTP 契约测试（INF-04）
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-26 23:40–23:44 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `cf6a77b` + 本轮工作区改动 |
+| 环境 | Windows；JDK 21.0.12；Maven 3.9.16；`@SpringBootTest(webEnvironment=RANDOM_PORT)` 真实启动内嵌服务器；Jackson 3（`tools.jackson`） |
+| 命令 | `mvn -B -Pdb test`（含 `WebContractIT`） |
+| 首次失败（保留） | `No qualifying bean of type 'org.springframework.web.client.RestClient$Builder'` —— Boot 4 不再自动注册该 Builder，5 个用例全部 error，退出码 1 |
+| 修复 | 改用 `RestClient.create(baseUrl)`；JSON 解析由 `com.fasterxml.jackson` 切换为 Boot 4 的 `tools.jackson.databind.json.JsonMapper` |
+| 复测输出摘要 | `WebContractIT`：`Tests run: 5, Failures: 0, Errors: 0`；全量 `Tests run: 33, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 覆盖内容 | ① `/api/v1/health` 返回契约 §1 成功信封（`success/data/traceId/timestamp`，timestamp 匹配 `+08:00`）；② 每次请求 traceId 唯一；③ 未知路径返回 404 且 `error.code=RESOURCE_NOT_FOUND`、`fieldErrors` 为数组、`details` 为对象；④ 错误响应体不泄漏 `java.`/`org.springframework`/`edu.sysu`/`Exception`/`.java`/`SQL`；⑤ `/v3/api-docs` 返回 OpenAPI 3 文档且包含 `/api/v1/health` |
+| 退出码 | 0（`-Pdb` 与默认构建均为 0） |
+| 结论 | PASS：统一响应/异常/健康/OpenAPI 在真实 HTTP 线上格式与契约一致；安全要求「不泄漏内部细节」有可执行证据 |
+| 验证边界 | 仅覆盖平台级接口；业务端点（认证/订单/库存）尚未实现，**NOT RUN** |
+
+## TE-20261126-20：本轮未运行
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| 业务端点 HTTP 测试 | NOT RUN | 认证/订单/库存接口未实现（S4/S5） |
+| Spring Security / JWT | NOT RUN | S4 范围 |
+| CORS 策略验证 | NOT RUN | 需前端源配置，S5 联调时验证 |
+| 前端 lint/build | NOT RUN | 未触碰 `frontend/` |
+
+## TE-20261127-01：DB-02/DB-03 迁移（V2/V3）在干净库全量执行
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 00:04–00:10 +08:00（Asia/Shanghai） |
+| 分支/HEAD | `feature/database-core` / `719e92e` + 本轮工作区改动 |
+| 环境 | Windows；JDK 21.0.12；Maven 3.9.16；`snowfield-db`（PostgreSQL 16.16, 5433）；测试库 `snowfield_test` **先 DROP 再 CREATE**，确保为空库 |
+| 命令 | `docker exec ... psql -c 'DROP DATABASE snowfield_test'` → `CREATE DATABASE`；`mvn -B -Pdb test` |
+| 输出摘要 | `Migrating schema "public" to version "1 - baseline"`、`"2 - campground and resource"`、`"3 - price rules and calendar"`；`Successfully applied 3 migrations to schema "public", now at version v3 (execution time 00:00.351s)`；合计 `Tests run: 54, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 退出码 | 0 |
+| 结论 | PASS：满足 AGENTS.md §4「迁移必须在干净数据库从 V1 全量成功执行」；V1→V2→V3 链式迁移无顺序依赖问题 |
+
+## TE-20261127-02：DB-02/DB-03 约束反例测试
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-27 00:06–00:09 +08:00（Asia/Shanghai） |
+| 命令 | `mvn -B -Pdb test -Dtest=ResourceAndPriceConstraintIT` |
+| 输出摘要 | `Tests run: 21, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS` |
+| 首次失败（保留） | `COMPILATION ERROR ... ResourceAndPriceConstraintIT.java:[247,16] 未报告的异常错误java.sql.SQLException` —— `holidayIsUniquePerCampgroundAndDate` 缺少 `throws SQLException`，退出码 1 |
+| 修复 | 为该测试方法补 `throws SQLException` |
+| 覆盖内容 | 营地：编码唯一、币种必须 CNY、时区必须 Asia/Shanghai；季节：`end<start` 被拒、同日边界合法；资源：`kind` 枚举、`base_capacity>0`、类型内编码唯一、`stay_mode` 枚举；开放规则：星期 1..7、`close_time>open_time`；维修：空区间被拒、合法区间通过；价格：`operation` 枚举、`value>=0`、`stay_mode` 枚举、**D-001 方案B 的 `resource_type_id=NULL` 允许**、`price_rule_weekday` 级联删除、节假日按营地+日期唯一 |
+| 退出码 | 0 |
+| 结论 | PASS：上述约束均由数据库真实拒绝/接受，证据来自反例而非代码阅读 |
+
+## TE-20261127-03：DB-02/DB-03 未覆盖范围
+
+| 类别 | 状态 | 原因 |
+|---|---|---|
+| 住宿时间排斥约束（`EXCLUDE USING gist`） | NOT RUN | 依赖 `lodging_reservation`（订单域 V4），S3 尚未建表 |
+| 住宿并发预订/超卖 | NOT RUN | 同上 |
+| 价格规则冲突检测（`PRICE_RULE_CONFLICT`） | NOT RUN | 属应用层报价逻辑（BK-01），尚未实现 |
+| `R5-04` 双空语义裁定 | OPEN | 契约未裁定，迁移刻意不加 CHECK，测试仅固定当前行为 |
+| 开发库 `snowfield` 迁移 | NOT RUN | 刻意不迁移开发库，只在隔离测试库验证 |
