@@ -9,6 +9,18 @@ spring:
     # 本地开发/测试沿用 .env 的占位密码；生产与 CI 必须用独立凭据。
     password: ${SNOWFIELD_DB_PASSWORD:REPLACE_WITH_YOUR_LOCAL_PASSWORD}
 
+# Web 契约测试需要验证真实 OpenAPI/Swagger 输出；生产默认值仍为关闭。
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
 # 集成测试直接调用过期服务，不等待后台调度；避免长套件运行期间异步扫描共享测试数据。
 snowfield:
   order-expiry-initial-delay-ms: 3600000
+  security:
+    jwt-secret: test-only-snowfield-jwt-secret-32-bytes-minimum
+    issuer: https://snowfield.test
+    access-token-ttl: 30m
+    allowed-origin: http://localhost:5173

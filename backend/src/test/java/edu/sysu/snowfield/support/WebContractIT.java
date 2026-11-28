@@ -1,11 +1,16 @@
 package edu.sysu.snowfield.support;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
@@ -34,6 +39,9 @@ class WebContractIT {
     @LocalServerPort
     private int port;
 
+    @Autowired
+    private FilterChainProxy securityFilterChain;
+
     private RestClient client() {
         // Boot 4 不再自动注册 RestClient.Builder，直接创建。
         return RestClient.create("http://127.0.0.1:" + port);
@@ -49,6 +57,11 @@ class WebContractIT {
         assertThat(response.getHeaders().getContentType())
                 .isNotNull()
                 .satisfies(type -> assertThat(type.isCompatibleWith(MediaType.APPLICATION_JSON)).isTrue());
+        assertSecurityHeaders(response.getHeaders());
+        assertThat(response.getHeaders().getFirst(HttpHeaders.CACHE_CONTROL))
+                .contains("no-cache", "no-store", "max-age=0", "must-revalidate");
+        assertThat(response.getHeaders().getFirst(HttpHeaders.PRAGMA)).isEqualTo("no-cache");
+        assertThat(response.getHeaders().getFirst(HttpHeaders.EXPIRES)).isEqualTo("0");
 
         JsonNode body = JSON.readTree(response.getBody());
         assertThat(body.get("success").asBoolean()).as("契约 §1：success 必须为 true").isTrue();
@@ -113,5 +126,70 @@ class WebContractIT {
         assertThat(doc.get("paths").has("/api/v1/health"))
                 .as("健康接口必须出现在 OpenAPI 文档中")
                 .isTrue();
+        JsonNode bearer = doc.get("components").get("securitySchemes").get("bearerAuth");
+        assertThat(bearer.get("type").asText()).isEqualTo("http");
+        assertThat(bearer.get("scheme").asText()).isEqualTo("bearer");
+        assertThat(bearer.get("bearerFormat").asText()).isEqualTo("JWT");
+
+        JsonNode paymentPost = doc.get("paths")
+                .get("/api/v1/orders/{orderId}/payments/simulate")
+                .get("post");
+        assertThat(paymentPost.get("security").get(0).has("bearerAuth"))
+                .as("受保护的模拟支付接口必须声明 Bearer 认证")
+                .isTrue();
+        assertThat(doc.get("paths").get("/api/v1/health").get("get").has("security"))
+                .as("公开健康接口不得被全局 Bearer 要求污染")
+                .isFalse();
+    }
+
+    @Test
+    void swaggerUiIsPubliclyServedForBearerAuthorization() {
+        ResponseEntity<String> response = client()
+                .get().uri("/swagger-ui/index.html")
+                .retrieve().toEntity(String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getContentType())
+                .isNotNull()
+                .satisfies(type -> assertThat(type.isCompatibleWith(MediaType.TEXT_HTML)).isTrue());
+        assertThat(response.getBody()).containsIgnoringCase("swagger ui");
+        assertSecurityHeaders(response.getHeaders());
+        assertThat(response.getHeaders().getFirst(HttpHeaders.CACHE_CONTROL)).isEqualTo("no-store");
+    }
+
+    @Test
+    void secureRequestReceivesHstsHeader() throws Exception {
+        MockHttpServletResponse response = invokeSecurityFilterChain(true);
+
+        assertThat(response.getHeader("Strict-Transport-Security"))
+                .isEqualTo("max-age=31536000 ; includeSubDomains");
+    }
+
+    @Test
+    void plainHttpRequestDoesNotReceiveHstsHeader() throws Exception {
+        MockHttpServletResponse response = invokeSecurityFilterChain(false);
+
+        assertThat(response.getHeader("Strict-Transport-Security")).isNull();
+    }
+
+    private MockHttpServletResponse invokeSecurityFilterChain(boolean secure) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/health");
+        request.setSecure(secure);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        securityFilterChain.doFilter(request, response, (ignoredRequest, ignoredResponse) -> {
+            // 只验证 SecurityFilterChain 的响应头写入，不绕过真实安全过滤器。
+        });
+        return response;
+    }
+
+    private static void assertSecurityHeaders(HttpHeaders headers) {
+        assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
+        assertThat(headers.getFirst("X-Frame-Options")).isEqualTo("DENY");
+        assertThat(headers.getFirst("Referrer-Policy")).isEqualTo("no-referrer");
+        assertThat(headers.getFirst("Permissions-Policy"))
+                .isEqualTo("camera=(), microphone=(), geolocation=()");
+        assertThat(headers.getFirst("Content-Security-Policy"))
+                .contains("default-src 'self'", "object-src 'none'", "frame-ancestors 'none'",
+                        "base-uri 'self'", "form-action 'self'");
     }
 }

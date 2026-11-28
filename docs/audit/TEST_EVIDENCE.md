@@ -668,3 +668,92 @@
 | 全量结果 | Flyway 成功校验5个迁移；`Tests run: 133, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:19 min`；`Finished at: 2026-11-27T23:36:56+08:00`；`FULL_DB_EXIT_CODE=0` |
 | 结论 | PASS：待支付订单过期、状态历史、住宿释放、重复扫描幂等及非待支付过滤均有真实 PostgreSQL 证据 |
 | 验证边界 | 未实际等待墙钟触发调度，测试直接调用同一事务方法；未做多 JVM 实例竞争实测；测试库未 DROP/CREATE；HTTP/认证仍 NOT RUN |
+
+## TE-20261128-01：Spring Security/JWT 与模拟支付真实 HTTP
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 00:27–00:43 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `97818a0` + 本轮工作区改动；fetch 后与 `origin/feature/database-core` 一致、相对 `origin/develop` ahead16/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3；Spring Security 7.1.3；真实 PostgreSQL 16.16 测试库，schema v5 |
+| 首次默认命令/失败 | `.\mvnw.cmd -B test` 在沙箱内首次执行；Maven 无权创建用户 `.m2` 的新依赖目录，`AccessDeniedException`；`BUILD FAILURE`；退出码1。获准写缓存并下载官方依赖后，同命令13/13 PASS、退出码0；这是环境权限失败，不冒充代码失败 |
+| 首次定向命令/失败 | `.\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT' test` 在沙箱内无法连接 `127.0.0.1:5433`，根因 `SocketException: Permission denied: getsockopt`；10项上下文错误、退出码1。获准访问本机测试库后复测10/10 PASS、退出码0 |
+| 扩展定向首次结果 | 增至13项后首次运行12通过/1错误、退出码1；错误为 issuer 普通字符串不能由 `Jwt.getIssuer()` 转为 URL。改成 URI issuer 后同命令 `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 18.868 s`；退出码0 |
+| CORS统一错误首次结果 | 为把未知Origin的默认纯文本403改为统一错误信封，首次加入自定义 `CorsFilter` 后应用上下文因存在2个 `CorsConfigurationSource` 候选而无法启动；`Tests run: 13, Failures: 0, Errors: 13, Skipped: 0`；退出码1。对项目配置源使用明确 `@Qualifier` 后复测 `Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 32.187 s`；退出码0 |
+| CORS强化终检 | 增加“不返回 `Access-Control-Allow-Origin` 且响应正文不回显恶意Origin”断言后，再次执行同一定向命令；`Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 23.239 s`；`Finished at: 2026-11-28T00:43:02+08:00`；退出码0 |
+| 安全断言 | 缺令牌→`AUTH_REQUIRED`；畸形/非法subject/非法role→`TOKEN_INVALID`；过期→`TOKEN_EXPIRED`；CUSTOMER访问admin→`ACCESS_DENIED`；ADMIN通过安全层后得到路由404；错误信封不泄漏异常/包名/SQL |
+| 令牌/密码/CORS | HS256密钥至少32字节且拒绝占位符；`iss/sub/roles/iat/exp` 验证；签发时效1800秒、无refresh；BCrypt strength12 单向哈希匹配；仅配置的 `http://localhost:5173` 预检通过，未知来源返回403与统一 `ACCESS_DENIED` JSON且不回显该Origin |
+| 支付 HTTP | Owner JWT 的 `sub` 被映射为 application userId；成功响应ID为字符串且无内部 `replayed` 字段；同HTTP幂等键重放仅1条支付；非Owner得到 `ORDER_NOT_FOUND`；缺幂等头/非法结果为 `VALIDATION_FAILED` 且不写支付 |
+| Web组合命令 | `.\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT,WebContractIT' test` |
+| Web组合结果 | `Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；既有健康、404、不泄漏内部信息和OpenAPI均未被安全过滤链破坏；`BUILD SUCCESS`；退出码0 |
+| 最终默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 13, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 5.059 s`；`Finished at: 2026-11-28T00:40:11+08:00`；退出码0 |
+| 最终全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移，schema v5；`Tests run: 146, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:23 min`；`Finished at: 2026-11-28T00:41:43+08:00`；退出码0 |
+| 结论 | PASS：JWT验证/授权/CORS/统一安全错误与模拟支付真实HTTP均有可执行证据；失败与修复链均保留 |
+| 验证边界 | 测试库未DROP/CREATE；未实现注册/登录/当前用户、创建/查询/取消订单HTTP（R6-11）；未做登录限流、密钥轮换、真实前端或JMeter；这些均为 NOT RUN |
+
+## TE-20261128-02：JWT 错误签名/issuer 与安全配置 fail-fast
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 00:52–00:56 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `765d3ab` + 本轮工作区改动；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead17/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Security 7.1.3；真实 PostgreSQL 16.16测试库，schema v5 |
+| 默认命令 | 在 `backend/` 执行 `.\mvnw.cmd -B test` |
+| 默认输出 | `SecurityConfigTest` 5/5；总计 `Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 9.657 s`；退出码0 |
+| 配置断言 | 合法配置产生HmacSHA256密钥；缺失/短/占位密钥，缺失/相对/非HTTP issuer，缺失/零/超过30分钟TTL，通配/非HTTP/带路径CORS Origin均在启动配置阶段拒绝 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT' test` |
+| 定向输出 | `Tests run: 14, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 16.323 s`；退出码0 |
+| HTTP反例 | 使用有效密钥但错误issuer、缺失roles、另一密钥签名的token均返回401 `TOKEN_INVALID`，不泄漏验证细节 |
+| 全量命令 | `.\mvnw.cmd -B -Pdb test` |
+| 全量输出 | Flyway校验5个迁移、schema v5；`Tests run: 152, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:31 min`；`Finished at: 2026-11-28T00:56:40+08:00`；退出码0 |
+| 结论 | PASS：R6-12 配置错误在启动期失败，JWT错误issuer/角色/签名在真实HTTP边界稳定拒绝 |
+| 验证边界 | 未验证密钥轮换、外部密钥管理服务、登录限流或真实反向代理Origin；测试库未DROP/CREATE，本条不替代空库迁移证据 |
+
+## TE-20261128-03：OpenAPI Bearer JWT 与 Swagger UI
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 01:02–01:07 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `f288983` + 本轮工作区改动；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead18/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；springdoc-openapi 3.2.0；真实 PostgreSQL 16.16测试库，schema v5 |
+| 定向命令 | `.\mvnw.cmd -B -Pdb '-Dtest=WebContractIT' test` |
+| 定向输出 | 强化Swagger UI断言后的最终结果：`Tests run: 6, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 13.180 s`；退出码0 |
+| 文档断言 | `/v3/api-docs` 存在 `components.securitySchemes.bearerAuth`，`type=http`、`scheme=bearer`、`bearerFormat=JWT`；模拟支付POST引用该方案；公开健康GET没有security字段 |
+| UI断言 | 未携带JWT访问 `/swagger-ui/index.html` 返回200及HTML，证明文档入口保持公开并可提供Authorize输入 |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 5.541 s`；退出码0 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 153, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:16 min`；`Finished at: 2026-11-28T01:07:26+08:00`；退出码0 |
+| 结论 | PASS：Swagger UI与OpenAPI真实输出可表达现有JWT认证，且未把公开接口误标为全局认证 |
+| 验证边界 | 未进行浏览器人工点击Authorize；测试验证生成文档结构和UI页面可访问，不验证尚未实现的登录取token流程 |
+
+## TE-20261128-04：安全响应头与部署默认关闭 Swagger
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 08:27–08:31 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `e7e5d4e` + 本轮工作区改动；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead19/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3；Spring Security 7.1.3；真实 PostgreSQL 16.16测试库，schema v5 |
+| 首次默认失败 | `.\mvnw.cmd -B test` 首次编译失败：Spring Security 7 的 `permissionsPolicy` 已弃用且链式调用停留在子配置，`frameOptions` 无法解析；`BUILD FAILURE`，退出码1。改用 `StaticHeadersWriter` 并拆分配置后复测18/18 PASS |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 9.048 s`；退出码0 |
+| 定向首次失败 | `.\mvnw.cmd -B -Pdb '-Dtest=WebContractIT,SwaggerDisabledWebIT' test`：禁用文档2项先通过，Swagger启用场景因静态资源实际仅返回 `Cache-Control: no-store`，原断言错误要求动态API的四项指令而1项失败；总计8项、1失败、退出码1 |
+| 定向最终结果 | 同命令复测；`Tests run: 8, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 14.151 s`；退出码0 |
+| 响应头断言 | 健康API含 `no-cache, no-store, max-age=0, must-revalidate`、`Pragma: no-cache`、`Expires: 0`；Swagger静态页含`no-store`；两者均含CSP、`nosniff`、`DENY`、`no-referrer`及禁用摄像头/麦克风/定位策略 |
+| 文档暴露断言 | test profile显式开启时OpenAPI与Swagger保持200；覆盖关闭属性的新上下文中 `/v3/api-docs` 与 `/swagger-ui/index.html` 均真实返回404；部署默认值由 `SNOWFIELD_OPENAPI_ENABLED:false` 控制 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 155, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:19 min`；`Finished at: 2026-11-28T08:30:55+08:00`；退出码0 |
+| 结论 | PASS：运行时响应头、动态/静态缓存策略、文档显式启用与默认关闭均有真实HTTP证据；修复前失败如实保留 |
+| 验证边界 | HSTS只在HTTPS响应发送，本轮内嵌服务器为HTTP故未断言；未验证反向代理覆盖响应头，也未进行浏览器人工CSP控制台检查；测试库未DROP/CREATE |
+
+## TE-20261128-05：HSTS secure/HTTP 过滤链分支
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 09:11–09:14 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `de067d6` + 本轮工作区改动；fetch后与 `origin/feature/database-core` 一致，相对 `origin/develop` ahead20/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3；Spring Security 7.1.3；真实 PostgreSQL 16.16测试库，schema v5 |
+| 首次定向失败 | `.\mvnw.cmd -B -Pdb '-Dtest=WebContractIT' test` 首次在testCompile失败：当前Boot依赖中不存在尝试使用的 `org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc`；`BUILD FAILURE`；退出码1。未增加依赖，改为直接调用应用实际 `FilterChainProxy` |
+| 定向复测 | 同命令；`WebContractIT` 8/8，0失败/0错误/0跳过；`BUILD SUCCESS`；`Total time: 13.011 s`；退出码0 |
+| HSTS断言 | secure request得到 `Strict-Transport-Security: max-age=31536000 ; includeSubDomains`；同一路径的普通HTTP request不含该头，符合Spring Security仅在HTTPS写HSTS的行为 |
+| 默认命令/结果 | `.\mvnw.cmd -B test`；`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 4.901 s`；退出码0 |
+| 全量命令/结果 | `.\mvnw.cmd -B -Pdb test`；Flyway校验5个迁移、schema v5；`Tests run: 157, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 01:07 min`；`Finished at: 2026-11-28T09:14:22+08:00`；退出码0 |
+| GitHub只读核验 | PR #3 为OPEN，base=`develop`、head=`feature/database-core`、`REVIEW_REQUIRED`、0 review、0 checks；未合并 |
+| 结论 | PASS：应用实际Spring Security过滤链的HSTS secure/HTTP分支已有自动化证据，且完整回归未受影响 |
+| 验证边界 | 测试以Mock servlet request模拟secure属性，不是TLS握手；真实域名/CA证书、边缘代理清洗、转发头策略与外部HTTPS响应均NOT RUN；不把本证据表述为生产HTTPS已部署 |

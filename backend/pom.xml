@@ -40,6 +40,16 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- S4 安全边界：无状态 Spring Security + JWT Resource Server。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
         <!-- 数据访问：MyBatis 4.1.0 官方对应 Boot 4.1（见 docs/ARCHITECTURE.md §7 版本矩阵） -->
         <dependency>
             <groupId>org.mybatis.spring.boot</groupId>

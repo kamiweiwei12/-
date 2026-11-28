@@ -41,3 +41,18 @@ logging:
   level:
     root: INFO
     edu.sysu.snowfield: INFO
+
+snowfield:
+  security:
+    # 至少32字节，只从环境变量注入；缺失时安全配置拒绝启动。
+    jwt-secret: ${SNOWFIELD_JWT_SECRET}
+    issuer: https://snowfield.local
+    access-token-ttl: 30m
+    allowed-origin: ${SNOWFIELD_CORS_ALLOWED_ORIGIN:http://localhost:5173}
+
+# 部署环境默认不暴露接口文档；本地按需显式开启，避免误把管理面信息公开到生产。
+springdoc:
+  api-docs:
+    enabled: ${SNOWFIELD_OPENAPI_ENABLED:false}
+  swagger-ui:
+    enabled: ${SNOWFIELD_OPENAPI_ENABLED:false}

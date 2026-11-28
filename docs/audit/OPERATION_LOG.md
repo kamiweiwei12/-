@@ -542,3 +542,83 @@ booking/application/BookingApplicationService  (@Transactional)
 | 文档 | 更新 DEVELOPMENT、任务板、CHANGELOG、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志；无新增问题需写 ISSUES |
 | 契约/迁移 | 实现既有 PENDING_PAYMENT→EXPIRED 与占用释放流程；未改 DB/API/ENUM/流程条文，`contract-change` 不适用 |
 | 剩余 | 认证HTTP入口；开放规则 R6-08；独立可用性查询；前端 |
+
+## OP-20261128-01：S4 JWT 安全边界与支付 HTTP
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 00:20–00:44 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + FEAT + TEST + INTEGRATION + GIT |
+| 用户授权 | 同意按推荐继续认证基础与订单 HTTP；Review 仍异步等待 |
+| 启动状态 | `feature/database-core` / `97818a0`，工作树干净；fetch 后远端功能分支一致，相对 `origin/develop` ahead16/behind0；PR #3 待 Review |
+| 范围 | Security/JWT/CORS/统一401/403、访问令牌输出端口、模拟支付 Controller/DTO、真实 HTTP/PostgreSQL IT；不改公共契约、Flyway、注册/登录或不完整订单DTO |
+| 实施 | 无状态 JWT Resource Server；HS256环境密钥、最长30分钟；CUSTOMER/ADMIN路径授权；JWT `sub` 唯一提供 userId；支付继续在 application 做对象所有权二次校验 |
+| 测试 | 定向最终13/13、Web组合18/18、默认13/13、完整PostgreSQL146/146，最终均退出码0；首次缓存权限、DB沙箱权限、issuer格式及CORS Bean歧义失败均保留在 TE-20261128-01 |
+| 提交门禁 | 完整审查25个暂存文件（918新增/12删除）；敏感信息扫描只命中环境变量、占位符及测试专用密钥；`git diff --cached --check` 无输出、退出码0 |
+| 发现 | R6-11：认证与部分订单HTTP DTO不完整，停止对应实现并等待双方 Review；未修改候选契约 |
+| 文档 | 更新 README、DEVELOPMENT、任务板、ARCHITECTURE版本矩阵、CHANGELOG、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE、开发日志和 `.env.example` |
+| 剩余 | R6-11 契约 Review 后实现登录/注册/当前用户/创建查询取消 HTTP；R6-08；独立可用性；前端 |
+
+## OP-20261128-02：JWT 与安全配置负面门禁
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 00:52–00:57 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + TEST + FIX + GIT |
+| 用户授权 | 明确要求不等待审查，继续下一项工作 |
+| 启动状态 | `feature/database-core` / `765d3ab`；工作树干净；fetch后功能分支0/0、相对develop ahead17/behind0 |
+| 范围 | 安全配置fail-fast与JWT负面测试；不改API/DB/ENUM/Flyway或前端 |
+| 实施 | issuer限制为绝对HTTP(S) URI；CORS限制为不含用户信息/路径/查询/片段的HTTP(S) origin；补错误issuer、缺角色、错误签名HTTP反例 |
+| 测试 | 默认18/18、定向HTTP 14/14、完整PostgreSQL 152/152，均0失败/0错误/0跳过、退出码0；TE-20261128-02 |
+| 发现 | R6-12：旧配置只判非空，无法在启动期拒绝URI语义错误或危险CORS值；已修复并登记 |
+| 提交门禁 | 完整审查12个暂存文件（250新增/9删除）；敏感信息扫描仅命中测试专用密钥；`git diff --cached --check` 无输出、退出码0 |
+| 契约/迁移 | 未修改公共契约、迁移或状态机；`contract-change`不适用 |
+| 剩余 | R6-11、R6-08仍不猜测；下一步继续不依赖其裁定的安全/测试工作 |
+
+## OP-20261128-03：OpenAPI Bearer JWT 与 Swagger UI
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 01:02–01:08 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + DOC/API-METADATA + TEST + GIT |
+| 用户授权 | 同意继续推荐的OpenAPI JWT安全声明与Swagger验证 |
+| 启动状态 | `feature/database-core` / `f288983`；工作树干净；fetch后功能分支0/0、相对develop ahead18/behind0 |
+| 范围 | 现有JWT认证的OpenAPI元数据、支付操作安全标记、Swagger UI/生成文档测试；不新增端点或改运行时授权/DTO/数据库 |
+| 实施 | 注册 `bearerAuth` HTTP bearer/JWT方案；仅模拟支付操作引用；不设置全局security requirement |
+| 测试 | WebContractIT 6/6、默认18/18、完整PostgreSQL 153/153，均0失败/0错误/0跳过、退出码0；TE-20261128-03 |
+| 发现 | 无新增业务缺陷；公开健康接口与受保护支付接口的文档边界正确 |
+| 提交门禁 | 完整审查11个暂存文件（149新增/4删除）；敏感信息扫描无命中；`git diff --cached --check` 无输出、退出码0 |
+| 契约/迁移 | 只同步既有认证事实到OpenAPI，不修改API字段/路径/错误码、DB/ENUM/流程或Flyway；`contract-change`不适用 |
+| 剩余 | 尚无登录取token闭环（R6-11）；未做人机浏览器点击测试 |
+
+## OP-20261128-04：安全响应头与文档暴露门禁
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 08:24–08:32 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + CONFIG + TEST + GIT |
+| 用户授权 | 明确同意继续下一项，不等待 `Janovo2117` Review |
+| 启动状态 | `feature/database-core` / `e7e5d4e`；工作树干净；fetch后功能分支0/0、相对develop ahead19/behind0 |
+| 范围 | 运行时安全响应头、Swagger/OpenAPI部署默认关闭、启用/禁用真实HTTP测试；不改业务API、DB/ENUM/Flyway或前端 |
+| 实施 | 保留Spring默认cache/nosniff/HSTS逻辑；显式CSP、Referrer/Permissions Policy、DENY；文档仅由 `SNOWFIELD_OPENAPI_ENABLED=true` 开启，test profile显式开启 |
+| 测试 | 首次编译与首次缓存断言失败均保留；最终定向8/8、默认18/18、完整PostgreSQL155/155，均0失败/0错误/0跳过、退出码0；TE-20261128-04 |
+| 发现 | R6-13：部署默认暴露文档且浏览器纵深响应头不完整；已修复并登记；HSTS因本轮仅HTTP未断言 |
+| 提交门禁 | 完整审查15个暂存文件（208新增/4删除，含新增IT）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0；不合并PR |
+| 契约/迁移 | 未修改公开路径/DTO/状态/错误码、DB/ENUM/流程或Flyway；`contract-change`不适用 |
+| 剩余 | R6-08/R6-11继续等待Review；反向代理响应头覆盖、HTTPS HSTS及浏览器CSP控制台仍NOT RUN |
+
+## OP-20261128-05：HSTS 与代理信任边界验证
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 09:08–09:15 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + TEST + DOC + GIT |
+| 用户授权 | 同意继续上一轮推荐的HTTPS/HSTS与部署边界验证 |
+| 启动状态 | `feature/database-core` / `de067d6`；工作树干净；fetch后功能分支0/0、相对develop ahead20/behind0；PR #3仍OPEN/REVIEW_REQUIRED、0 review、0 checks |
+| 范围 | HSTS secure/HTTP分支测试与反向代理信任边界说明；不启用转发头信任、不配置证书/域名、不改API/DB/Flyway |
+| 实施 | 扩展WebContractIT直接调用应用实际FilterChainProxy，分别模拟secure与普通请求；文档明确代理终止TLS前必须先清洗外部转发头 |
+| 测试 | 首次因不存在的Boot测试注解包编译失败并保留；修正后定向8/8、默认18/18、全量PostgreSQL157/157，最终均退出码0；TE-20261128-05 |
+| 风险边界 | 真实TLS握手、CA证书、反向代理配置和外部HTTPS仍NOT RUN；未凭空选择 `server` 转发头策略 |
+| 提交门禁 | 完整审查10个暂存文件（140新增/5删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
+| 契约/迁移 | 仅测试与部署文档，无公开API/DTO/状态/错误码、DB/ENUM/流程或Flyway变更；`contract-change`不适用 |
+| 剩余 | 真实部署拓扑确定后补TLS/代理验收；R6-08/R6-11继续等待Review |

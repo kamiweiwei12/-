@@ -206,3 +206,58 @@
 | contract-change | 未读取（本轮不适用） | 不适用：实现既有 EXPIRED 状态转换与住宿释放 | 未修改 DB/API/ENUM/业务流程条文或 Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261128-01
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：认证安全、跨 identity/payment/common 的 HTTP 集成 | 完整恢复 Git/远端/任务板/日志/契约/架构；分类 SECURITY+FEAT+TEST；遇 DTO 歧义停止对应实现；测试与文档闭环 | APPLIED |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：继续向 PR #3 增加独立安全提交 | fetch确认0 behind及工作树干净；只暂存本单元文件；提交前完整diff/敏感信息/`git diff --check`；不合并、不改设置 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：安全、HTTP、数据库与构建验证 | 保留3类首次失败；追加定向13、组合18、默认13、全量146的实测输出/退出码和NOT RUN边界 | APPLIED；TE-20261128-01 |
+| contract-change | 未读取（本轮不适用） | 不适用：只实现候选契约已有Bearer/JWT/角色/PaymentResponse；发现Auth/Order DTO缺口后停止并登记R6-11 | 未修改 API/DB/ENUM/流程条文或Flyway，等待另一成员Review | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代 `Janovo2117` 的 GitHub Review。
+
+## SC-20261128-02
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：认证配置修复与安全测试 | 恢复Git/任务板/日志/API/架构；限定不改契约/迁移；执行测试、文档与Git闭环 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：配置单测、真实HTTP负面测试及全量回归 | 记录默认18、定向14、全量152的命令、输出、退出码及NOT RUN边界 | APPLIED；TE-20261128-02 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立安全加固提交 | fetch确认0 behind；仅暂存本单元；提交前完整diff/敏感信息/`git diff --check`；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：配置约束和测试加固不改变公开API/DB/ENUM/流程 | 未修改契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-03
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：OpenAPI安全元数据与真实HTTP测试 | 恢复Git/任务板/日志/API/架构；限定只同步既有认证事实；执行测试、文档与Git闭环 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：OpenAPI JSON、Swagger UI、默认及全量回归 | 记录定向6、默认18、全量153的命令、输出、退出码及浏览器人工测试NOT RUN边界 | APPLIED；TE-20261128-03 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立OpenAPI提交 | fetch确认0 behind；仅暂存本单元；提交前完整diff/敏感信息/`git diff --check`；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：只描述现有Bearer认证，不改变公开路径、DTO、状态、错误或数据库 | 未修改契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-04
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：运行时安全配置、测试及文档同步 | 恢复Git/远端/任务板/开发日志；限定不改契约/迁移；登记R6-13并完成测试、完整diff与文档闭环 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：真实HTTP响应头、文档启用/禁用与全量回归 | 如实保留编译/API与缓存断言失败；记录定向8、默认18、全量155的输出、退出码和NOT RUN边界 | APPLIED；TE-20261128-04 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立安全提交 | fetch确认0 behind；仅暂存本单元；提交前完整diff/敏感信息/`git diff --check`；不合并、不改仓库设置 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：只改部署开关和响应头，不改变公开API/DB/ENUM/业务流程 | 未修改契约或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-05
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `.agents/skills/project-governance/SKILL.md` | 适用：安全测试、部署边界文档与Git闭环 | 恢复Git/远端/任务板/日志/PR状态；限定不猜代理拓扑；执行测试、完整diff与文档同步 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：HSTS分支、默认及完整回归 | 保留首次编译失败；记录定向8、默认18、全量157的实际输出/退出码及TLS/代理NOT RUN边界 | APPLIED；TE-20261128-05 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：向现有PR #3追加独立测试提交 | fetch确认0 behind；只读核验PR仍待Review且无checks；提交前只暂存本单元并执行完整diff/敏感信息/空白门禁；不合并 | APPLIED |
+| contract-change | 未读取（本轮不适用） | 不适用：仅验证既有Spring Security HSTS行为并补部署说明 | 未修改契约、运行时配置或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
