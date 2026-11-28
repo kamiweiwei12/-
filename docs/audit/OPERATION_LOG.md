@@ -670,3 +670,19 @@ booking/application/BookingApplicationService  (@Transactional)
 | 提交门禁 | 完整审查13个暂存文件（168新增/7删除）；敏感信息模式扫描0命中；`git diff --cached --check`无输出、退出码0 |
 | 契约/迁移 | 只显式落实契约既有JSON媒体类型与POST方法；复用`VALIDATION_FAILED`，未新增公开字段/路径/状态或修改DB/ENUM/流程/Flyway；`contract-change`不适用 |
 | 剩余 | 请求大小、速率限制与代理改写仍NOT RUN；R6-08/R6-11继续等待Review |
+
+## OP-20261128-09：第四次审计非协作项整改
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 20:20–20:48 +08:00（Asia/Taipei） |
+| 分类 | SECURITY + FIX + TEST + MAINTENANCE + DOC + GIT |
+| 用户授权 | 阅读第四次独立审计，暂不处理协作部分，修复其他应修项并继续推进 |
+| 启动状态 | `feature/database-core` / `a486bf0`；工作树干净；首次fetch因`.git/FETCH_HEAD`沙箱权限失败，获准后成功；相对 `origin/develop` ahead24/behind0 |
+| 范围 | 仅处理审计P1-2 fail-open与P3-1调度证据；不拆PR、不改PR描述/分支保护/本地develop，不代替Review，不改公共契约或Flyway |
+| 实施 | `SecurityConfig` 改为未显式白名单路由默认认证；`SecurityPaymentWebIT`增加匿名401/认证404；新增独立 `OrderExpirySchedulingIT` 实测调度触发的订单/明细过期及住宿释放 |
+| 测试 | 默认21/21；定向真实PostgreSQL 24/24；全量PostgreSQL 172/172；全部退出码0；沙箱Docker管道权限失败单独记录且不归因代码；TE-20261128-09 |
+| 发现 | R6-17 fail-open与R6-18缺调度真实触发证据已整改；`@EnableScheduling`原实现存在，未做无效重复配置 |
+| 契约/迁移 | 只收紧未登记路由的认证默认值并补测试；契约已有的公开白名单不变；无API/DB/ENUM/流程/Flyway变更，`contract-change` 不适用 |
+| 文档 | 同步CHANGELOG、DEVELOPMENT、任务板、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE与开发日志 |
+| 协作边界 | 按用户指示暂不处理审计中的PR #2/#3 Review、PR拆分/标题、第二作者及GitHub设置项；未将其记为解决 |

@@ -808,3 +808,19 @@
 | 边界断言 | GET支付路径在Controller前返回405及`VALIDATION_FAILED`信封；不接受JSON的POST在Controller前返回无体406；两者payment均为0且无内部信息泄漏 |
 | 结论 | PASS：HTTP方法/内容协商错误不再误报500或在失败响应前产生支付副作用；两轮失败均保留 |
 | 验证边界 | 406无JSON信封是因为客户端明确拒绝`application/json`；服务端不违背Accept强行返回JSON。未测试代理层内容协商改写、请求大小或限流 |
+
+## TE-20261128-09：默认拒绝与过期调度真实触发
+
+| 字段 | 内容 |
+|---|---|
+| 日期 | 2026-11-28 20:44–20:47 +08:00（Asia/Taipei） |
+| 分支/基线 | `feature/database-core` / `a486bf0` + 本轮工作区改动；fetch成功后相对 `origin/develop` ahead24/behind0 |
+| 环境 | Windows；Java 21.0.12；Maven Wrapper 3.9.16；Spring Boot 4.1.3/Spring Security 7.1.3；真实 PostgreSQL 16.16 `snowfield_test`，Flyway schema v5 |
+| 默认命令/结果 | `backend\\mvnw.cmd -B test`；`Tests run: 21, Failures: 0, Errors: 0, Skipped: 0`；`BUILD SUCCESS`；`Total time: 11.779 s`；结束于20:44:19；退出码0 |
+| 环境检查 | 沙箱内 `docker ps` 因 Docker named pipe 权限被拒，未执行数据库测试，不归因于代码；获准后仅从现有容器配置在进程内注入密码，未输出或写入凭据 |
+| 定向命令/结果 | `.\\mvnw.cmd -B -Pdb '-Dtest=SecurityPaymentWebIT,OrderExpirySchedulingIT' test`；调度IT 1/1、安全HTTP IT 23/23，合计24/24，0失败/0错误/0跳过；退出码0 |
+| 安全断言 | 匿名请求未登记 `/api/v1/not-registered` 返回401 `AUTH_REQUIRED`；合法CUSTOMER令牌请求同路由到达MVC并返回404 `RESOURCE_NOT_FOUND`，证明是默认认证门禁而非隐藏全部未登记路由 |
+| 调度断言 | 测试不直接调用 `expireDueOrders()`；由 `@EnableScheduling` 后台任务触发，订单/明细均转 `EXPIRED`、住宿占用转 `RELEASED`，订单与住宿历史各一条；固定间隔设为1小时，避免缓存测试上下文干扰其他IT |
+| 全量命令/结果 | `.\\mvnw.cmd -B -Pdb test`；17个测试集，`Tests run: 172, Failures: 0, Errors: 0, Skipped: 0`；Flyway校验5个迁移、schema v5；退出码0；最后报告于20:47:33产生 |
+| 结论 | PASS：安全路由由fail-open改为fail-closed，过期调度的真实触发和占用释放已有PostgreSQL可执行证据，完整回归未受影响 |
+| 验证边界 | 调度测试验证单JVM真实触发；多JVM调度器并发仍只由已有 `SKIP LOCKED` 事务测试间接覆盖，未启动多实例调度器 |

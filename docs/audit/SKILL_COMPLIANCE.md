@@ -294,3 +294,14 @@
 | contract-change | 未读取（本轮不适用） | 不适用：显式声明契约已有POST与`application/json`，未新增路径、DTO、错误码或业务语义 | 未修改API/DB/ENUM/流程契约或Flyway | NOT APPLICABLE |
 
 本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。
+
+## SC-20261128-09
+
+| Skill | 实际读取文件 | 适用性 | 实际执行步骤 | 验证状态 |
+|---|---|---|---|---|
+| project-governance | `AGENTS.md`、`.agents/skills/project-governance/SKILL.md`、DEVELOPMENT、任务板、开发/审计日志、API/架构文档 | 适用：审计整改、安全修复与调度测试 | 恢复Git/远端真实状态，限定非协作范围，先查证 `@EnableScheduling`，再做最小修复、全量回归和文档闭环 | APPLIED |
+| test-evidence | `.agents/skills/test-evidence/SKILL.md` | 适用：默认、真实HTTP/调度定向与全量PostgreSQL回归 | 记录命令、环境、沙箱Docker权限失败、退出码、断言与单JVM验证边界 | APPLIED；TE-20261128-09 |
+| git-pr | `.agents/skills/git-pr/SKILL.md`、`docs/TEAM_WORKFLOW.md` | 适用：功能分支状态恢复与本单元提交门禁 | fetch首次权限失败后获准重试；确认ahead24/behind0；完整diff/`git diff --check`/测试后只暂存本单元；不合并、不改设置 | APPLIED |
+| contract-change | `.agents/skills/contract-change/SKILL.md` | 不适用：只收紧默认认证策略并增加运行证据，现有公开路径与契约语义不变 | 未修改API/DB/ENUM/流程/冻结记录或Flyway | NOT APPLICABLE |
+
+本记录只证明列出的文件读取与项目内步骤，不证明模型隐藏思考过程，也不替代独立人工审计。

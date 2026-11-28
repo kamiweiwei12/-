@@ -180,6 +180,17 @@ class SecurityPaymentWebIT {
     }
 
     @Test
+    void unregisteredRouteRequiresAuthenticationByDefault() {
+        assertError(() -> client().get()
+                        .uri("/api/v1/not-registered")
+                        .retrieve().toEntity(String.class),
+                HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED");
+
+        assertError(() -> get("/api/v1/not-registered", token(userId, "CUSTOMER")),
+                HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND");
+    }
+
+    @Test
     void authenticatedOwnerPaysAndResponseUsesContractStringIds() throws Exception {
         ResponseEntity<String> response = paymentRequest(
                 order.orderId(), token(userId, "CUSTOMER"), "pay-http-success", "SUCCESS");
