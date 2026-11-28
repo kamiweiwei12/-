@@ -686,6 +686,7 @@ booking/application/BookingApplicationService  (@Transactional)
 | 契约/迁移 | 只收紧未登记路由的认证默认值并补测试；契约已有的公开白名单不变；无API/DB/ENUM/流程/Flyway变更，`contract-change` 不适用 |
 | 文档 | 同步CHANGELOG、DEVELOPMENT、任务板、ISSUES、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE与开发日志 |
 | 协作边界 | 按用户指示暂不处理审计中的PR #2/#3 Review、PR拆分/标题、第二作者及GitHub设置项；未将其记为解决 |
+| Git | 安全/调度单元提交为 `24e7d77`；后续与性能基线一并快进推送到 `origin/feature/database-core`，远端最终SHA `ee250b9`；未合并 |
 
 ## OP-20261128-10：PERF-01 首批执行计划基线
 
@@ -701,3 +702,4 @@ booking/application/BookingApplicationService  (@Transactional)
 | 结果 | 最终退出码0；过期扫描0.164 ms、住宿重叠0.023 ms、支付幂等0.040 ms；均走索引；回滚后性能基线用户计数0；TE-20261128-10 |
 | 文档 | 同步CHANGELOG、DEVELOPMENT、任务板、TEST_EVIDENCE、OPERATION_LOG、SKILL_COMPLIANCE和开发日志；无新的可追踪产品缺陷，ISSUES无需修改 |
 | 边界 | JMeter、代表性数据、冷缓存、高并发锁等待与优化前后对照仍NOT RUN；PERF-01保持IN_PROGRESS |
+| Git | 性能基线单元提交为 `ee250b9`；`git push origin HEAD:feature/database-core` 快进成功（`a486bf0..ee250b9`），`git ls-remote` 核对远端SHA为 `ee250b9af4f34addfc1eb24514b3e7544dd463dc`；未改PR元数据或合并 |
